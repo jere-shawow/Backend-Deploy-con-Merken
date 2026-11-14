@@ -1,0 +1,57 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: astronaut-backend
+  # Credenciales fuera del código: se leen de variables de entorno o del archivo
+  # backend/.env (no se sube a git). Ver backend/.env.example
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    # MySQL en EC2. El driver se detecta solo a partir de la URL.
+    url: "${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:merken_db}?serverTimezone=UTC&characterEncoding=UTF-8&sslMode=PREFERRED&allowPublicKeyRetrieval=true}"
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
+    hikari:
+      connection-timeout: 10000
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  sql:
+    init:
+      # Scripts por motor: schema-h2.sql (migraciones de la base H2 local / pruebas).
+      # En MySQL Hibernate crea las tablas completas, no hay script.
+      platform: ${DB_PLATFORM:mysql}
+      mode: always
+      continue-on-error: false
+  jpa:
+    hibernate:
+      # update: crea/actualiza SOLO las tablas de esta app (astronauts, garmin_links, app_settings);
+      # nunca borra tablas ni columnas existentes.
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+# Garmin Connect Personal API (sincronización interna de HeartRate y SleepHours)
+garmin:
+  base-url: ${GARMIN_BASE_URL:https://personal.connectapi.garmin.com}
+  # Zona horaria de la cuenta Garmin: define qué día es "hoy" al pedir los datos
+  time-zone: ${GARMIN_TIME_ZONE:America/Santiago}
+  # El sueño cambia una vez al día: se consulta cada N minutos (el pulso, en cada vuelta)
+  sleep-refresh-minutes: ${GARMIN_SLEEP_REFRESH_MINUTES:10}
+  sync:
+    # Tarea programada de sincronización (se apaga en las pruebas)
+    enabled: ${GARMIN_SYNC_ENABLED:true}
+
+# Datos de ejemplo al arrancar con la base vacía.
+# Apagado por defecto: en MySQL se usan los datos reales (se activa en el perfil h2 y en E2E).
+app:
+  seed:
+    enabled: ${APP_SEED_ENABLED:false}
+
+logging:
+  level:
+    com.astronaut: INFO

@@ -1,0 +1,12 @@
+# Credenciales locales (MySQL): NUNCA subir
+.env
+
+# Compilación y base local
+target/
+data/
+
+# IDEs y logs
+.idea/
+*.iml
+.vscode/
+*.log

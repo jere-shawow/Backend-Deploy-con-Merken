@@ -1,0 +1,27 @@
+# Perfil "test": base en memoria, sin datos de ejemplo y sin la tarea programada
+spring:
+  datasource:
+    url: jdbc:h2:mem:astronaut-test;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  sql:
+    init:
+      platform: h2
+  h2:
+    console:
+      enabled: false
+
+app:
+  seed:
+    enabled: false
+
+garmin:
+  # Las pruebas que usan Garmin apuntan base-url a un servidor falso (@DynamicPropertySource)
+  base-url: http://127.0.0.1:9
+  time-zone: America/Santiago
+  sync:
+    enabled: false
+
+logging:
+  level:
+    com.astronaut: WARN
