@@ -110,10 +110,10 @@ class AnalysisServiceTest {
         Result r=service.analyze(review);
         assertThat(r.status()).isEqualTo("GENERATED_REVIEW_REQUIRED");assertThat(r.activities()).isEmpty();
     }
-    @Test void quotedProvidedValuesAreAllowedButInventedNumbersAndMissingActivitySourceAreRejected() {
+    @Test void quotedProvidedValuesAndKnownProvenanceAreAllowedButInventedNumbersAreRejected() {
         assertThat(service.parse(valid().replace("Pulse alone","The stored pulse is 75 bpm; that alone"),context())).isNotNull();
         assertThatThrownBy(()->service.parse(valid().replace("Pulse alone","The stored pulse is 999 bpm; that alone"),context())).isInstanceOf(ServiceUnavailableException.class);
-        assertThatThrownBy(()->service.parse(valid().replace("\"jaxa-life\",\"project-policy\"","\"project-policy\""),context())).isInstanceOf(ServiceUnavailableException.class);
+        assertThat(service.parse(valid().replace("\"jaxa-life\",\"project-policy\"","\"project-policy\""),context()).activityIds()).containsExactly("READING");
     }
     @Test void realNovaSyntheticFixturePassesTheActualParser() throws Exception {
         // Captured from Nova Pro with invented values only, never personal records.
@@ -143,5 +143,10 @@ class AnalysisServiceTest {
         Context c=new Context(List.of(new Reading("sleep",4.8D,"h",null,"SIMULATED"),new Reading("body_battery",44D,"score_0_100",null,"SIMULATED")),List.of(),"UNKNOWN","UNKNOWN","UNKNOWN",List.of(),"NOT_ASSESSED");
         String text="{\"summary\":\"Your 4.8h sleep record and Body Battery of 44/100 belong to the same snapshot.\",\"observations\":[],\"uncertainties\":[],\"activityIds\":[],\"sourceIds\":[\"nasa-sleep\"]}";
         assertThat(service.parse(text,c)).isNotNull();
+    }
+    @Test void acceptsProvidedDataProvenanceWithoutTreatingItAsAnInventedCitation() {
+        String response=valid().replace("[\"READING\"]","[]").replace("\"jaxa-life\",\"project-policy\"","\"SIMULATED\"");
+        assertThat(service.parse(response,context()).sourceIds()).containsExactly("SIMULATED");
+        assertThatThrownBy(()->service.parse(response.replace("\"SIMULATED\"","\"UNSUPPLIED_SOURCE\""),context())).isInstanceOf(ServiceUnavailableException.class);
     }
 }
