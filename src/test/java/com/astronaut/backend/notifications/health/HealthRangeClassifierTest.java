@@ -70,7 +70,7 @@ class HealthRangeClassifierTest {
     void noRangesForMoodAndNutrition() {
         assertThat(classifier.info("mood")).isEmpty();
         assertThat(classifier.info("nutrition")).isEmpty();
-        assertThat(classifier.info("distance").orElseThrow().notify()).isFalse();
-        assertThat(classifier.info("pulse").orElseThrow().notify()).isTrue();
+        assertThat(classifier.info("distance").orElseThrow().notifies()).isFalse();
+        assertThat(classifier.info("pulse").orElseThrow().notifies()).isTrue();
     }
 }

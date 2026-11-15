@@ -108,6 +108,37 @@ Para no repetir la lógica de rangos en cada front:
 
 `severity`: `OK` (verde), `WARNING` (naranjo), `CRITICAL` (rojo). `overall` es la peor.
 
+## Recomendación IA de una alerta (Amazon Nova Pro)
+
+`GET /api/notifications/{id}/recommendation`
+
+Se pide **al abrir** una notificación automática. El backend llama al análisis Nova Pro
+(`docs/bedrock-analysis.md`) con los datos actuales del astronauta y su informe del día.
+
+- **No se guarda en la base de datos**: solo queda en memoria del backend.
+- Una llamada a Nova por astronauta por cada alerta nueva o cambio de nivel. Abrir otra
+  repetición de la misma alerta devuelve la misma recomendación (`"cached": true`).
+- Texto en inglés. `analysis.status`: `GENERATED`, `GENERATED_REVIEW_REQUIRED` o
+  `GENERATED_PROTOCOL_REQUIRED` (hay una alerta urgente: el protocolo sigue mandando).
+- Puede tardar hasta ~45 s: usa un tiempo de espera de al menos 60 s.
+
+```json
+{"notificationId": 12, "astronautId": 3, "generatedAt": "2026-11-15T12:00:05Z", "cached": false,
+ "analysis": {"provider": "AWS_BEDROCK", "modelId": "us.amazon.nova-pro-v1:0", "language": "en",
+   "status": "GENERATED_REVIEW_REQUIRED",
+   "narrative": {"summary": "…", "uncertainties": ["…"]}, "activities": [],
+   "disclaimer": "Experimental ground-station explanation, not a diagnosis…", "clinicallyValidated": false}}
+```
+
+| Código | Cuándo |
+|---|---|
+| 503 | IA desactivada (`NOTIFICATIONS_AI_ENABLED=false` o `BEDROCK_ANALYSIS_ENABLED=false`) o Nova no respondió / respuesta rechazada |
+| 429 | Nova está procesando otra solicitud (máx. 1 a la vez, 10 s entre llamadas): reintenta |
+| 400 | notificación manual |
+| 404 | no existe |
+
+La alerta y su guía nunca dependen de Nova: si la IA falla, la notificación sigue igual.
+
 ## Otros
 
 | Método | Ruta | |

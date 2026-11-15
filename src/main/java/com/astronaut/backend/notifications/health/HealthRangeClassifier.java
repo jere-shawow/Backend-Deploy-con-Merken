@@ -110,11 +110,11 @@ public class HealthRangeClassifier {
         ParameterDef def = parameters.get(parameter);
         return Optional.ofNullable(def == null ? null
                 : new ParameterInfo(def.parameter(), def.name(), def.field(), def.unit(),
-                        !Boolean.FALSE.equals(def.notify())));
+                        !Boolean.FALSE.equals(def.notifies())));
     }
 
     /** Datos básicos de un parámetro. */
-    public record ParameterInfo(String parameter, String name, String field, String unit, boolean notify) {
+    public record ParameterInfo(String parameter, String name, String field, String unit, boolean notifies) {
     }
 
     /**
@@ -152,7 +152,8 @@ public class HealthRangeClassifier {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ParameterDef(String parameter, String name, String field, String unit, Boolean notify,
+    record ParameterDef(String parameter, String name, String field, String unit,
+                        @JsonProperty("notify") Boolean notifies,
                         Map<String, RangeDef> ranges) {
     }
 

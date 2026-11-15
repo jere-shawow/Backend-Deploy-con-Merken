@@ -93,3 +93,17 @@ Run mvn verify for mocked unit/integration tests. A real deployment smoke test
 must use the synthetic preview and confirm AWS_BEDROCK, model ID, token usage,
 all metric explanations and unauthorized access rejection. This is not
 validation of physiological recommendations or an automatic clinical report.
+
+## Alert recommendations (automatic consent)
+
+`GET /api/notifications/{id}/recommendation` requests this same analysis when a user opens an
+automatic alert. It does not use `X-Analysis-Token`; instead `NOTIFICATIONS_AI_ENABLED=true`
+(default) is the crew-wide authorization to send the minimized metrics to Bedrock, equivalent
+to `allowRemoteAnalysis=true`. `BEDROCK_ANALYSIS_ENABLED=true` is still required.
+Model text is not persisted: it is kept only in process memory, one result per astronaut per
+alert episode (first alert or level change), for at most `NOTIFICATIONS_AI_CACHE_HOURS` (24).
+Alerts are created and repeated independently of Nova; failures return 503/429 and leave the
+alert, its body and its guide unchanged. The endpoint is reachable by any caller that can reach
+the backend, so restrict network access; the cache and the existing single-flight/10-second
+cooldown limit repeated billing.
+

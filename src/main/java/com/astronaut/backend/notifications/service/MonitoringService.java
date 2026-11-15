@@ -104,7 +104,7 @@ public class MonitoringService {
     /** "notify": false en health-ranges.json desactiva las alertas del parámetro. */
     private boolean notifies(HealthParameter parameter) {
         String key = parameter == HealthParameter.BLOOD_PRESSURE ? HealthParameter.SYSTOLIC_KEY : parameter.key();
-        return classifier.info(key).map(HealthRangeClassifier.ParameterInfo::notify).orElse(true);
+        return classifier.info(key).map(HealthRangeClassifier.ParameterInfo::notifies).orElse(true);
     }
 
     /**

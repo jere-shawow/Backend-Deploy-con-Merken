@@ -146,4 +146,18 @@ class NotificationControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$[0].title").value("URGENTE: Azúcar en sangre muy baja – Diego"))
                 .andExpect(jsonPath("$[0].annex").exists());
     }
+
+    @Test
+    @DisplayName("GET /{id}/recommendation: sin Bedrock activo responde 503 claro; la alerta no se ve afectada")
+    void recommendationWithoutBedrock() throws Exception {
+        ASTRONAUTS.put(9, "Diego", 72, 40.0, 36.6, 8.0); // azúcar muy baja
+        mockMvc.perform(post("/api/notifications/evaluate")).andExpect(status().isOk());
+        Long id = notificationRepository.findAll().get(0).getId();
+
+        mockMvc.perform(get("/api/notifications/{id}/recommendation", id))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Recomendación IA no disponible")));
+        mockMvc.perform(get("/api/notifications/{id}", id)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/notifications/{id}/recommendation", 999_999)).andExpect(status().isNotFound());
+    }
 }

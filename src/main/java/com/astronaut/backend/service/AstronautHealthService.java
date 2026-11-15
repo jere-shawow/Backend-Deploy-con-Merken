@@ -6,6 +6,7 @@ import com.astronaut.backend.notifications.health.HealthRangeClassifier;
 import com.astronaut.backend.notifications.health.HealthStatus;
 import com.astronaut.backend.notifications.health.RangeSeverity;
 import com.astronaut.backend.notifications.model.HealthParameter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -42,7 +43,7 @@ public class AstronautHealthService {
             String status,
             String severity,
             String description,
-            boolean notify) {
+            @JsonProperty("notify") boolean notifies) {
     }
 
     /** overall = la peor gravedad entre todos los parámetros (OK, WARNING o CRITICAL). */
@@ -81,23 +82,23 @@ public class AstronautHealthService {
     private ParameterStatus simple(Astronaut a, String key, HealthRangeClassifier.ParameterInfo info) {
         Double value = value(a, info.field());
         if (value == null) {
-            return new ParameterStatus(key, info.field(), info.name(), null, info.unit(), null, null, null, info.notify());
+            return new ParameterStatus(key, info.field(), info.name(), null, info.unit(), null, null, null, info.notifies());
         }
         Optional<HealthStatus> status = ranges.classify(key, value);
         return new ParameterStatus(key, info.field(), info.name(), number(value), info.unit(),
                 status.map(Enum::name).orElse(null),
                 status.map(s -> ranges.severity(key, s).name()).orElse(null),
                 status.flatMap(s -> ranges.description(key, s)).orElse(null),
-                info.notify());
+                info.notifies());
     }
 
     private ParameterStatus bloodPressure(Astronaut a, HealthRangeClassifier.ParameterInfo info) {
         return evaluator.bloodPressure(a.getBloodPressure())
                 .map(e -> new ParameterStatus(BLOOD_PRESSURE, "bloodPressure", "Presión arterial", e.displayValue(),
                         info.unit(), e.status().name(), e.severity().name(),
-                        ranges.description(e.rangeKey(), e.status()).orElse(null), info.notify()))
+                        ranges.description(e.rangeKey(), e.status()).orElse(null), info.notifies()))
                 .orElseGet(() -> new ParameterStatus(BLOOD_PRESSURE, "bloodPressure", "Presión arterial",
-                        a.getBloodPressure(), info.unit(), null, null, null, info.notify()));
+                        a.getBloodPressure(), info.unit(), null, null, null, info.notifies()));
     }
 
     /** Valor del campo del astronauta indicado en "field" de health-ranges.json. */

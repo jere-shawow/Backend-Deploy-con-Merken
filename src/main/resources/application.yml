@@ -9,12 +9,6 @@ analysis:
     model-id: ${BEDROCK_MODEL_ID:us.amazon.nova-pro-v1:0}
     api-token: ${BEDROCK_ANALYSIS_API_TOKEN:}
 
-# Frontends web en otro dominio (front en la nube). Lista separada por comas.
-# Por defecto cualquier origen; en producción conviene poner solo la URL del front.
-app:
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
-
 spring:
   application:
     name: astronaut-backend
@@ -107,6 +101,14 @@ notifications:
     radiation: 120
   monitor:
     enabled: ${NOTIFICATIONS_MONITOR_ENABLED:true}
+  # Recomendación IA (Amazon Nova Pro) al abrir una notificación automática:
+  # GET /api/notifications/{id}/recommendation. No se guarda en la base (solo en memoria).
+  # true = el envío de los datos del astronauta a AWS Bedrock queda autorizado para toda la
+  # tripulación. Requiere además BEDROCK_ANALYSIS_ENABLED=true (ver docs/bedrock-analysis.md).
+  ai:
+    enabled: ${NOTIFICATIONS_AI_ENABLED:true}
+    # Una llamada a Nova por astronauta por alerta nueva o cambio de nivel; se reutiliza hasta 24 h
+    cache-hours: ${NOTIFICATIONS_AI_CACHE_HOURS:24}
 
 # ---------------------------------------------------------------------------
 # Informes diarios: base NO relacional AWS DynamoDB (respaldo local si no hay conexión)
@@ -141,6 +143,10 @@ reports:
 # Datos de ejemplo al arrancar con la base vacía.
 # Apagado por defecto: en MySQL se usan los datos reales (se activa en el perfil h2 y en E2E).
 app:
+  # Frontends web en otro dominio (front en la nube). Lista separada por comas.
+  # Por defecto cualquier origen; en producción conviene poner solo la URL del front.
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   seed:
     enabled: ${APP_SEED_ENABLED:false}
 
