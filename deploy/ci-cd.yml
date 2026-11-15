@@ -1,0 +1,116 @@
+# CI/CD del backend (monolito) hacia el EC2
+#
+#  pull request a main  -> compila y ejecuta todas las pruebas (unitarias + integración)
+#  push a main          -> pruebas + despliegue automático en el EC2
+#  manual               -> pestaña Actions > "CI/CD backend" > Run workflow
+#
+# Secrets necesarios (Settings > Secrets and variables > Actions):
+#   EC2_HOST      IP o DNS público del EC2 (ej. 34.233.92.102)
+#   EC2_USER      usuario SSH (ec2-user en Amazon Linux)
+#   EC2_SSH_KEY   contenido COMPLETO del archivo .pem
+# El archivo .env con las credenciales vive SOLO en el EC2 (~/backend/.env).
+name: CI/CD backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DEPLOY_DIR: backend   # carpeta en el home del usuario del EC2
+
+jobs:
+  build-test:
+    name: Compilar y probar
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Pruebas unitarias e integración (H2 en memoria, sin AWS ni MySQL)
+        run: mvn -B -ntp verify
+
+      - name: Reportes de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Guardar jar probado
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/astronaut-backend.jar
+          retention-days: 7
+
+  deploy:
+    name: Desplegar en EC2
+    needs: build-test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Descargar jar probado
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: deploy/
+
+      - name: Configurar SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          if [ -z "$EC2_SSH_KEY" ] || [ -z "$EC2_HOST" ]; then
+            echo "::error::Faltan los secrets EC2_HOST / EC2_USER / EC2_SSH_KEY"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2.pem
+          chmod 600 ~/.ssh/ec2.pem
+          ssh-keyscan -T 15 -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Copiar archivos al EC2
+        env:
+          TARGET: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}
+        run: |
+          ssh -i ~/.ssh/ec2.pem "$TARGET" "mkdir -p ~/$DEPLOY_DIR/data"
+          scp -i ~/.ssh/ec2.pem \
+            deploy/Dockerfile deploy/docker-compose.yml deploy/deploy.sh \
+            deploy/astronaut-backend.jar .env.example \
+            "$TARGET:~/$DEPLOY_DIR/"
+
+      - name: Construir imagen y levantar (con vuelta atrás si falla)
+        env:
+          TARGET: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}
+        run: |
+          ssh -i ~/.ssh/ec2.pem "$TARGET" \
+            "cd ~/$DEPLOY_DIR && chmod +x deploy.sh && ./deploy.sh ${GITHUB_SHA::7}"
+
+      - name: Limpiar llave
+        if: always()
+        run: rm -f ~/.ssh/ec2.pem

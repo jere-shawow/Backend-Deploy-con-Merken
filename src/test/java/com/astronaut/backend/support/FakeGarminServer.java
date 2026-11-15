@@ -32,6 +32,8 @@ public class FakeGarminServer implements AutoCloseable {
     public static final String TOKEN_PATH = "/personalapitoken-service/personal-api/personal-api-key/token";
     public static final String HEART_RATE_PATH = "/wellness-service/wellness/dailyHeartRate";
     public static final String SLEEP_PATH = "/sleep-service/sleep/dailySleep";
+    public static final String BODY_BATTERY_PATH = "/wellness-service/wellness/bodyBattery/reports/daily";
+    public static final String HRV_PATH = "/hrv-service/hrv/";
 
     private final HttpServer server;
     private final ExecutorService executor = Executors.newFixedThreadPool(32);
@@ -43,6 +45,10 @@ public class FakeGarminServer implements AutoCloseable {
 
     private volatile Integer heartRate = 88;
     private volatile Integer sleepSeconds = 27_000; // 7,5 h
+    private volatile Integer bodyBattery = 64;
+    private volatile Integer hrv = 45;
+    private final AtomicInteger bodyBatteryRequests = new AtomicInteger();
+    private final AtomicInteger hrvRequests = new AtomicInteger();
     private volatile long latencyMillis = 0;
     private volatile int forcedDataStatus = 0;     // != 0 -> los endpoints de datos responden ese código
     private volatile String lastTokenAccept;
@@ -57,6 +63,8 @@ public class FakeGarminServer implements AutoCloseable {
         server.createContext(TOKEN_PATH, this::handleToken);
         server.createContext(HEART_RATE_PATH, this::handleHeartRate);
         server.createContext(SLEEP_PATH, this::handleSleep);
+        server.createContext(BODY_BATTERY_PATH, this::handleBodyBattery);
+        server.createContext(HRV_PATH, this::handleHrv);
         server.start();
     }
 
@@ -70,6 +78,10 @@ public class FakeGarminServer implements AutoCloseable {
     public FakeGarminServer sleepSeconds(Integer seconds) { this.sleepSeconds = seconds; return this; }
     public FakeGarminServer latencyMillis(long millis) { this.latencyMillis = millis; return this; }
     public FakeGarminServer failDataWith(int status) { this.forcedDataStatus = status; return this; }
+    public FakeGarminServer bodyBattery(Integer level) { this.bodyBattery = level; return this; }
+    public FakeGarminServer hrv(Integer ms) { this.hrv = ms; return this; }
+    public int bodyBatteryRequests() { return bodyBatteryRequests.get(); }
+    public int hrvRequests() { return hrvRequests.get(); }
 
     /** Invalida los tokens emitidos (simula expiración del lado de Garmin). */
     public void revokeTokens() { issuedTokens.clear(); }
@@ -77,6 +89,10 @@ public class FakeGarminServer implements AutoCloseable {
     public void reset() {
         heartRate = 88;
         sleepSeconds = 27_000;
+        bodyBattery = 64;
+        hrv = 45;
+        bodyBatteryRequests.set(0);
+        hrvRequests.set(0);
         latencyMillis = 0;
         forcedDataStatus = 0;
         lastTokenAccept = null;
@@ -145,7 +161,38 @@ public class FakeGarminServer implements AutoCloseable {
         send(ex, 200, "application/json", body);
     }
 
+    /** Lista de reportes diarios con bodyBatteryValuesArray = [[ts, nivel], ...]. */
+    private void handleBodyBattery(HttpExchange ex) throws IOException {
+        bodyBatteryRequests.incrementAndGet();
+        if (!authorizedDataRequest(ex, "startDate")) {
+            return;
+        }
+        long now = Instant.now().toEpochMilli();
+        String values = bodyBattery == null ? "[]"
+                : "[[" + (now - 3_600_000) + ",20],[" + now + "," + bodyBattery + "]]";
+        send(ex, 200, "application/json", "[{\"date\":\"today\",\"charged\":39,\"drained\":20,"
+                + "\"bodyBatteryValuesArray\":" + values + "}]");
+    }
+
+    /** /hrv-service/hrv/{fecha}: hrvSummary.lastNightAvg. */
+    private void handleHrv(HttpExchange ex) throws IOException {
+        hrvRequests.incrementAndGet();
+        if (!authorizedDataRequest(ex, null)) {
+            return;
+        }
+        String body = hrv == null
+                ? "{\"hrvSummary\":{\"lastNightAvg\":null},\"hrvReadings\":[]}"
+                : "{\"hrvSummary\":{\"lastNightAvg\":" + hrv + ",\"status\":\"BALANCED\"},"
+                + "\"hrvReadings\":[{\"hrvValue\":37},{\"hrvValue\":22}]}";
+        send(ex, 200, "application/json", body);
+    }
+
     private boolean authorizedDataRequest(HttpExchange ex) throws IOException {
+        return authorizedDataRequest(ex, "date");
+    }
+
+    /** dateParam = parámetro de fecha obligatorio en la query (null si va en la ruta). */
+    private boolean authorizedDataRequest(HttpExchange ex, String dateParam) throws IOException {
         delay();
         if (forcedDataStatus != 0) {
             send(ex, forcedDataStatus, "application/json", "{\"error\":\"forced\"}");
@@ -156,8 +203,8 @@ public class FakeGarminServer implements AutoCloseable {
             send(ex, 401, "application/json", "{\"error\":\"unauthorized\"}");
             return false;
         }
-        if (date(ex) == null) {
-            send(ex, 400, "application/json", "{\"error\":\"date required\"}");
+        if (dateParam != null && param(ex, dateParam) == null) {
+            send(ex, 400, "application/json", "{\"error\":\"" + dateParam + " required\"}");
             return false;
         }
         return true;
@@ -175,13 +222,17 @@ public class FakeGarminServer implements AutoCloseable {
     }
 
     private static String date(HttpExchange ex) {
+        return param(ex, "date");
+    }
+
+    private static String param(HttpExchange ex, String name) {
         String query = ex.getRequestURI().getQuery();
         if (query == null) {
             return null;
         }
         for (String pair : query.split("&")) {
-            if (pair.startsWith("date=")) {
-                return pair.substring(5);
+            if (pair.startsWith(name + "=")) {
+                return pair.substring(name.length() + 1);
             }
         }
         return null;

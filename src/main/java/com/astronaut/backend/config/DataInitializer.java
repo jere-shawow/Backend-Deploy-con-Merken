@@ -30,12 +30,19 @@ public class DataInitializer {
     CommandLineRunner seedData(AstronautRepository repository) {
         return args -> {
             if (repository.count() == 0) {
-                repository.saveAll(List.of(
+                List<Astronaut> crew = List.of(
                         new Astronaut("Valentina Rojas", 0.72, 408_000.0, "118/76", 68, 92.5, 36.7, 7.5, 2600, 98.0, Mood.BUENO),
                         new Astronaut("Mateo Fuentes", 0.95, 408_000.0, "124/82", 74, 101.0, 36.9, 6.0, 2900, 97.0, Mood.CANSADO),
                         new Astronaut("Camila Herrera", 1.10, 384_400.0, "115/75", 63, 88.0, 36.5, 8.0, 2400, 99.0, Mood.EXCELENTE),
                         new Astronaut("Diego Navarro", 1.35, 384_400.0, "130/85", 82, 110.0, 37.1, 5.5, 3100, 96.0, Mood.ESTRESADO)
-                ));
+                );
+                int[] bodyBattery = {72, 45, 88, 30};
+                double[] hrv = {48, 39, 62, 28};
+                for (int i = 0; i < crew.size(); i++) {
+                    crew.get(i).setBodyBattery(bodyBattery[i]);
+                    crew.get(i).setHrv(hrv[i]);
+                }
+                repository.saveAll(crew);
                 log.info("Datos iniciales cargados: 4 astronautas");
                 return;
             }

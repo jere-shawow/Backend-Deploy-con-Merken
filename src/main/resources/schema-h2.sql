@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS app_settings (
     id BIGINT NOT NULL PRIMARY KEY,
     refresh_interval_seconds INTEGER NOT NULL
 );
+-- v5: Body Battery y HRV (opcionales)
+ALTER TABLE IF EXISTS astronauts ADD COLUMN IF NOT EXISTS body_battery INTEGER;
+ALTER TABLE IF EXISTS astronauts ADD COLUMN IF NOT EXISTS hrv DOUBLE PRECISION;
+
+-- v4: retención de informes (días)
+ALTER TABLE IF EXISTS app_settings ADD COLUMN IF NOT EXISTS report_retention_days INTEGER;
 
 -- v3: vínculos con Garmin Connect (Personal API)
 CREATE TABLE IF NOT EXISTS garmin_links (

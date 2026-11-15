@@ -22,6 +22,22 @@ garmin:
   sync:
     enabled: false
 
+notifications:
+  monitor:
+    enabled: false
+
+reports:
+  scheduler:
+    enabled: false
+  # sin AWS en las pruebas: endpoint inalcanzable -> modo local
+  storage-check-seconds: 3600
+  local-dir: ${java.io.tmpdir}/astronaut-reports-test
+  dynamodb:
+    endpoint: http://127.0.0.1:9
+    access-key-id: test
+    secret-access-key: test
+    create-table: false
+
 logging:
   level:
     com.astronaut: WARN

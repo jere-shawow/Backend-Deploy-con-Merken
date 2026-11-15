@@ -20,6 +20,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
+    /** Una dependencia (base de datos) no respondió, p. ej. al generar un informe. */
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnavailable(ServiceUnavailableException ex) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), null);
+    }
+
     @ExceptionHandler(GarminException.class)
     public ResponseEntity<Map<String, Object>> handleGarmin(GarminException ex) {
         // API key inválida -> 400; Garmin caído / sin red -> 502

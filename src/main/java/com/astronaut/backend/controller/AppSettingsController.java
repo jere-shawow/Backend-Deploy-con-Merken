@@ -1,5 +1,6 @@
 package com.astronaut.backend.controller;
 
+import com.astronaut.backend.dto.AppSettingsRequest;
 import com.astronaut.backend.model.AppSettings;
 import com.astronaut.backend.service.AppSettingsService;
 import jakarta.validation.Valid;
@@ -30,7 +31,10 @@ public class AppSettingsController {
     }
 
     @PutMapping
-    public AppSettings update(@Valid @RequestBody AppSettings settings) {
-        return service.update(settings);
+    public AppSettings update(@Valid @RequestBody AppSettingsRequest request) {
+        AppSettings data = new AppSettings();
+        data.setRefreshIntervalSeconds(request.refreshIntervalSeconds());
+        data.setReportRetentionDays(request.reportRetentionDays());
+        return service.update(data);
     }
 }
