@@ -25,4 +25,8 @@ class AnalysisAccessFilterTest {
     @Test void existingRoutesRemainUnaffected() throws Exception {
         assertThat(request(false,"",null,"/healthz").getContentAsString()).isEqualTo("reached");
     }
+    @Test void normalizedMvcRoutesCannotBypassAuthentication() throws Exception {
+        for(String path:new String[]{"/api/analysis;test/preview","/api/analysis/preview;test","/api/%61nalysis/preview","/api//analysis/preview"})
+            assertThat(request(true,"x".repeat(40),null,path).getStatus()).as(path).isEqualTo(401);
+    }
 }
