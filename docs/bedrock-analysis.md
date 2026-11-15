@@ -58,13 +58,19 @@ labeled GARMIN_LINKED_BACKEND_UNVERIFIED only for pulse/sleep/HRV/Body Battery;
 other fields are BACKEND_UNVERIFIED. Linking does not prove per-field provenance:
 the existing API can also update readings. No real values are labeled simulated.
 
-The result includes original structured context, English summary, one explanation
-per current metric, uncertainties, zero to two leisure IDs and deterministic
-activity cards. Critical existing alert states bypass Nova; warning states permit
-explanations while blocking leisure and retaining REVIEW_MEDICAL. These are
-existing demonstration alert rules, not validated clinical decisions. All
-exercise suggestions are blocked until a reviewed mission-plan/clearance
-integration exists. There is no diagnosis, dose or prescription functionality.
+The result includes original structured context and a connected English explanation,
+with concrete next steps rather than a metric-by-metric report. The prompt asks for
+an explicit "What to do now:" paragraph: retain the existing protocol/medical review,
+request mission-lead workload review and protect the next scheduled sleep opportunity
+when relevant. Verify measurement context rather than calling a pulse abnormal without
+a supplied flag or verified resting context. Optional reading/music belongs to a later
+permitted off-duty period after required review; it is not treatment.
+
+Nova explains all core-action states. IMMEDIATE_PROTOCOL and REVIEW_MEDICAL remain
+independent, block activity IDs, and are returned unchanged. The frontend displays the
+summary without design changes. These prototype rules and generated explanations are
+not clinically validated. No exercise dose, medication, sleep target or new clinical
+protocol is supplied. Generated prose still needs human review.
 
 ## Reliability, cost and privacy
 
