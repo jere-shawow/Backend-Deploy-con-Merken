@@ -64,12 +64,18 @@ notifications:
   time-zone: ${NOTIFICATIONS_TIME_ZONE:America/Santiago}
   # Vigencia de cada notificación
   timeout-hours: ${NOTIFICATIONS_TIMEOUT_HOURS:24}
-  # Repetición mientras el valor siga muy alto / muy bajo
+  # URGENTE (muy bajo / muy alto): repetición mientras siga en ese nivel
   repeat-minutes:
     pulse: 15
     glucose: 30
     temperature: 30
     sleep: 1440   # 1 vez al día
+  # ADVERTENCIA (bajo / alto): repetición mientras siga en ese nivel
+  warning-repeat-minutes:
+    pulse: 30
+    glucose: 60
+    temperature: 60
+    sleep: 1440
   monitor:
     enabled: ${NOTIFICATIONS_MONITOR_ENABLED:true}
 

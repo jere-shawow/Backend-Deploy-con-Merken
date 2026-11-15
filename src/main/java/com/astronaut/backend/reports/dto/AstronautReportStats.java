@@ -13,5 +13,7 @@ public record AstronautReportStats(
         MetricStats bodyBattery,
         MetricStats hrv,
         String lastMood,
-        long alerts) {
+        long alerts,
+        long warningAlerts,
+        long criticalAlerts) {
 }

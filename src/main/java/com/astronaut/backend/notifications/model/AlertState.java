@@ -9,13 +9,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
 /**
  * Estado de alerta activo de un astronauta en un parámetro: sirve para repetir
  * la notificación cada X minutos y no duplicarla tras un reinicio.
- * Se borra cuando el valor vuelve a un nivel no crítico.
+ * Se borra cuando el valor vuelve al rango normal.
  */
 @Entity
 @Table(name = "notification_alert_states",
@@ -34,6 +36,7 @@ public class AlertState {
     private HealthParameter parameter;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "alert_level", nullable = false, length = 20)
     private AlertLevel level;
 

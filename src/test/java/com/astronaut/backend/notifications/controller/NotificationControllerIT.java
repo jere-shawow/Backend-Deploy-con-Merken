@@ -142,6 +142,8 @@ class NotificationControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/notifications").param("astronautId", "9"))
                 .andExpect(jsonPath("$[0].parameter").value("GLUCOSE"))
                 .andExpect(jsonPath("$[0].level").value("VERY_LOW"))
+                .andExpect(jsonPath("$[0].severity").value("CRITICAL"))
+                .andExpect(jsonPath("$[0].title").value("URGENTE: Azúcar en sangre muy baja – Diego"))
                 .andExpect(jsonPath("$[0].annex").exists());
     }
 }

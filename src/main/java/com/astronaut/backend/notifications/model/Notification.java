@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -41,9 +43,17 @@ public class Notification {
     @Column(name = "health_parameter", length = 20)
     private HealthParameter parameter;
 
+    /** VERY_LOW, LOW, HIGH o VERY_HIGH (texto, no ENUM nativo, para poder agregar niveles). */
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "alert_level", length = 20)
     private AlertLevel level;
+
+    /** WARNING (bajo / alto) o CRITICAL (muy bajo / muy alto); null en las manuales. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "severity", length = 20)
+    private Severity severity;
 
     @Column(name = "measured_value")
     private Double measuredValue;
@@ -87,6 +97,8 @@ public class Notification {
     public void setParameter(HealthParameter parameter) { this.parameter = parameter; }
     public AlertLevel getLevel() { return level; }
     public void setLevel(AlertLevel level) { this.level = level; }
+    public Severity getSeverity() { return severity; }
+    public void setSeverity(Severity severity) { this.severity = severity; }
     public Double getMeasuredValue() { return measuredValue; }
     public void setMeasuredValue(Double measuredValue) { this.measuredValue = measuredValue; }
     public String getTitle() { return title; }

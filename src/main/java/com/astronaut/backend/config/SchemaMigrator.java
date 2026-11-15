@@ -35,6 +35,47 @@ public class SchemaMigrator {
         ensureColumn("app_settings", "report_retention_days", "INTEGER");
         ensureColumn("astronauts", "body_battery", "INTEGER");
         ensureColumn("astronauts", "hrv", "DOUBLE");
+        // niveles de alerta: antes solo VERY_LOW / VERY_HIGH (ENUM nativo en MySQL); ahora también LOW / HIGH
+        ensureVarchar("notifications", "alert_level", 20);
+        ensureVarchar("notification_alert_states", "alert_level", 20);
+        ensureColumn("notifications", "severity", "VARCHAR(20)");
+    }
+
+    /** Convierte una columna ENUM nativa en VARCHAR para aceptar valores nuevos. */
+    void ensureVarchar(String table, String column, int length) {
+        try (Connection c = dataSource.getConnection()) {
+            if (!tableExists(c, table)) {
+                return;
+            }
+            String type = columnType(c, table, column);
+            if (type == null || !type.toUpperCase().contains("ENUM")) {
+                return;
+            }
+            String product = c.getMetaData().getDatabaseProductName().toLowerCase();
+            String sql = product.contains("mysql") || product.contains("mariadb")
+                    ? "ALTER TABLE " + table + " MODIFY " + column + " VARCHAR(" + length + ")"
+                    : "ALTER TABLE " + table + " ALTER COLUMN " + column + " VARCHAR(" + length + ")";
+            try (Statement st = c.createStatement()) {
+                st.executeUpdate(sql);
+                log.info("Columna {}.{} convertida de {} a VARCHAR({})", table, column, type, length);
+            }
+        } catch (SQLException e) {
+            log.warn("No se pudo convertir la columna {}.{} a VARCHAR: {}", table, column, e.getMessage());
+        }
+    }
+
+    private static String columnType(Connection c, String table, String column) throws SQLException {
+        DatabaseMetaData md = c.getMetaData();
+        for (String t : new String[]{table, table.toUpperCase()}) {
+            for (String col : new String[]{column, column.toUpperCase()}) {
+                try (ResultSet rs = md.getColumns(c.getCatalog(), null, t, col)) {
+                    if (rs.next()) {
+                        return rs.getString("TYPE_NAME");
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     void ensureColumn(String table, String column, String sqlType) {

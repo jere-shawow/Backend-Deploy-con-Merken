@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
 
 /**
  * Revisa los datos de todos los astronautas y genera notificaciones cuando
- * pulso, azúcar, temperatura o sueño están en nivel MUY ALTO o MUY BAJO.
+ * pulso, azúcar, temperatura o sueño salen del rango normal:
+ *  - bajo / alto            -> ADVERTENCIA
+ *  - muy bajo / muy alto    -> URGENTE (y de inmediato si empeora desde advertencia)
  */
 @Service
 public class MonitoringService {
@@ -72,14 +74,15 @@ public class MonitoringService {
 
     private boolean evaluate(AstronautSnapshot astronaut, HealthParameter parameter, Instant now) {
         Double value = parameter.valueOf(astronaut);
-        Optional<AlertLevel> level = value == null ? Optional.empty() : criticalLevel(parameter, value);
+        Optional<AlertLevel> level = value == null ? Optional.empty() : alertLevel(parameter, value);
         Optional<AlertState> state = stateRepository.findByAstronautIdAndParameter(astronaut.id(), parameter);
-        Duration repeat = properties.repeatInterval(parameter);
+        Duration repeat = level.map(l -> properties.repeatInterval(parameter, l))
+                .orElseGet(() -> properties.repeatInterval(parameter));
 
         switch (AlertPolicy.decide(state, level, now, repeat)) {
             case NOTIFY -> {
                 notificationService.createAlert(astronaut.id(), astronaut.astronautName(), parameter,
-                        level.orElseThrow(), value);
+                        level.orElseThrow(), state.map(AlertState::getLevel).orElse(null), value);
                 AlertState s = state.orElseGet(() -> new AlertState(astronaut.id(), parameter, level.get(), now));
                 s.setLevel(level.get());
                 s.setLastNotifiedAt(now);
@@ -92,15 +95,18 @@ public class MonitoringService {
         return false;
     }
 
-    private Optional<AlertLevel> criticalLevel(HealthParameter parameter, double value) {
+    /** bajo / alto -> advertencia; muy bajo / muy alto -> urgente; normal -> nada. */
+    private Optional<AlertLevel> alertLevel(HealthParameter parameter, double value) {
         Optional<HealthStatus> status = classifier.classify(parameter.key(), value);
         if (status.isEmpty()) {
             return Optional.empty();
         }
         return switch (status.get()) {
             case VERY_LOW -> Optional.of(AlertLevel.VERY_LOW);
+            case LOW -> Optional.of(AlertLevel.LOW);
+            case HIGH -> Optional.of(AlertLevel.HIGH);
             case VERY_HIGH -> Optional.of(AlertLevel.VERY_HIGH);
-            default -> Optional.empty();
+            case NORMAL -> Optional.empty();
         };
     }
 

@@ -4,6 +4,8 @@ import com.astronaut.backend.reports.client.AstronautDataSource;
 import com.astronaut.backend.reports.client.NotificationSource;
 import com.astronaut.backend.reports.config.ReportsProperties;
 import com.astronaut.backend.reports.dto.AstronautReportStats;
+import com.astronaut.backend.reports.dto.AstronautTimeline;
+import com.astronaut.backend.reports.dto.Measurement;
 import com.astronaut.backend.reports.dto.MetricStats;
 import com.astronaut.backend.reports.dto.ReportDetail;
 import com.astronaut.backend.reports.dto.ReportSummary;
@@ -141,14 +143,21 @@ public class ReportService {
     public ReportDetail get(String id) {
         ReportDocument doc = store.load(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe un informe con id " + id));
+        // las mediciones se acumulan (nunca se sobrescriben): se ordenan por hora
+        List<AstronautReading> readings = doc.readings().stream()
+                .sorted(Comparator.comparing(AstronautReading::capturedAt))
+                .toList();
         Map<Long, List<AstronautReading>> byAstronaut = new LinkedHashMap<>();
-        for (AstronautReading r : doc.readings()) {
+        for (AstronautReading r : readings) {
             byAstronaut.computeIfAbsent(r.astronaut().id(), k -> new ArrayList<>()).add(r);
         }
         List<AstronautReportStats> stats = byAstronaut.values().stream()
                 .map(list -> statsOf(list, doc.comments()))
                 .toList();
-        return new ReportDetail(summaryOf(doc.meta()), stats, doc.readings(), doc.comments());
+        List<AstronautTimeline> timeline = byAstronaut.values().stream()
+                .map(this::timelineOf)
+                .toList();
+        return new ReportDetail(summaryOf(doc.meta()), stats, timeline, readings, doc.comments());
     }
 
     public StorageStatus storageStatus() {
@@ -176,9 +185,10 @@ public class ReportService {
               .append(';').append(Boolean.TRUE.equals(a.garminLinked()) ? "si" : "no").append('\n');
         }
         sb.append("\nCOMENTARIOS (notificaciones del día)\n");
-        sb.append("hora;astronauta;parametro;nivel;valor;titulo;detalle\n");
+        sb.append("hora;astronauta;tipo;parametro;nivel;valor;titulo;detalle\n");
         for (ReportComment c : d.comments()) {
             sb.append(HOUR.format(c.time().atZone(zone))).append(';').append(csv(c.astronautName()))
+              .append(';').append(c.level() == null ? "manual" : isCritical(c.level()) ? "urgente" : "advertencia")
               .append(';').append(csv(c.parameter())).append(';').append(csv(c.level()))
               .append(';').append(n(c.value())).append(';').append(csv(c.title()))
               .append(';').append(csv(c.body())).append('\n');
@@ -232,9 +242,30 @@ public class ReportService {
                 m.reportDate().plusDays(retentionDays()), store.mode().name());
     }
 
+    /** Historial de un astronauta: una fila por medición, en orden de hora. */
+    AstronautTimeline timelineOf(List<AstronautReading> readings) {
+        AstronautData last = readings.get(readings.size() - 1).astronaut();
+        List<Measurement> measurements = readings.stream()
+                .map(r -> {
+                    AstronautData a = r.astronaut();
+                    return new Measurement(r.capturedAt(), HOUR.format(r.capturedAt().atZone(zone)),
+                            a.heartRate(), a.bloodPressure(), a.bloodSugar(), a.bodyTemperature(),
+                            a.oxygenInBlood(), a.sleepHours(), a.bodyBattery(), a.hrv(), a.mood());
+                })
+                .toList();
+        return new AstronautTimeline(last.id(), last.astronautName(), measurements);
+    }
+
+    static boolean isCritical(String level) {
+        return "VERY_LOW".equals(level) || "VERY_HIGH".equals(level);
+    }
+
     static AstronautReportStats statsOf(List<AstronautReading> readings, List<ReportComment> comments) {
         AstronautData last = readings.get(readings.size() - 1).astronaut();
-        long alerts = comments.stream().filter(c -> Objects.equals(c.astronautId(), last.id())).count();
+        List<ReportComment> mine = comments.stream().filter(c -> Objects.equals(c.astronautId(), last.id())).toList();
+        long alerts = mine.size();
+        long critical = mine.stream().filter(c -> isCritical(c.level())).count();
+        long warnings = mine.stream().filter(c -> c.level() != null && !isCritical(c.level())).count();
         return new AstronautReportStats(
                 last.id(), last.astronautName(), readings.size(),
                 MetricStats.of(readings.stream().map(r -> r.astronaut().heartRate()).toList()),
@@ -244,7 +275,7 @@ public class ReportService {
                 MetricStats.of(readings.stream().map(r -> r.astronaut().oxygenInBlood()).toList()),
                 MetricStats.of(readings.stream().map(r -> r.astronaut().bodyBattery()).toList()),
                 MetricStats.of(readings.stream().map(r -> r.astronaut().hrv()).toList()),
-                last.mood(), alerts);
+                last.mood(), alerts, warnings, critical);
     }
 
     private String local(Instant instant) {

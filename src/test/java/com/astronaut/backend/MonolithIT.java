@@ -54,6 +54,7 @@ class MonolithIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].parameter").value("PULSE"))
+                .andExpect(jsonPath("$[0].severity").value("CRITICAL"))
                 .andExpect(jsonPath("$[0].body").value(startsWith("[")));
 
         reports.captureSnapshot();
@@ -69,6 +70,7 @@ class MonolithIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/reports/{id}", id))
                 .andExpect(jsonPath("$.readings[0].astronaut.astronautName").value("Valentina"))
                 .andExpect(jsonPath("$.readings[0].astronaut.heartRate").value(140))
+                .andExpect(jsonPath("$.timeline[0].measurements[0].heartRate").value(140))
                 .andExpect(jsonPath("$.comments[0].astronautName").value("Valentina"))
                 .andExpect(jsonPath("$.astronauts[0].alerts").value(1));
     }

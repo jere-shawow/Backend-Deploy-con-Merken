@@ -3,6 +3,7 @@ package com.astronaut.backend.notifications.service;
 import com.astronaut.backend.notifications.model.AlertLevel;
 import com.astronaut.backend.notifications.model.HealthParameter;
 import com.astronaut.backend.notifications.model.Notification;
+import com.astronaut.backend.notifications.model.Severity;
 import com.astronaut.backend.notifications.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,9 @@ class MonitoringIT extends AbstractIntegrationTest {
         Notification n = notificationsFor(HealthParameter.PULSE).get(0);
         assertThat(n.getAstronautId()).isEqualTo(7L);
         assertThat(n.getLevel()).isEqualTo(AlertLevel.VERY_HIGH);
+        assertThat(n.getSeverity()).isEqualTo(Severity.CRITICAL);
+        assertThat(n.getTitle()).isEqualTo("URGENTE: Pulso muy alto – Valentina");
+        assertThat(n.getBody()).contains("31 bpm sobre el máximo normal", "requiere atención inmediata");
         assertThat(n.getMeasuredValue()).isEqualTo(131.0);
         assertThat(n.getBody()).contains("131 bpm", "Valentina");
         // START = 15:00 UTC = 12:00 en Santiago: la hora queda en el cuerpo
@@ -119,12 +123,72 @@ class MonitoringIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("niveles bajo / alto (naranjo) no generan notificación; solo muy bajo / muy alto")
-    void warningLevelsDoNotNotify() {
-        ASTRONAUTS.put(1, "A", 110, 150.0, 38.0, 6.0); // todos "alto" o "bajo"
+    @DisplayName("bajo / alto (naranjo): ADVERTENCIA descriptiva en los 4 parámetros")
+    void warningLevelsNotify() {
+        ASTRONAUTS.put(1, "Ana", 110, 150.0, 38.0, 6.0); // pulso alto, azúcar alta, temp. alta, sueño bajo
 
+        assertThat(monitoring.runCycle()).isEqualTo(4);
+
+        assertThat(notificationRepository.findAll())
+                .allSatisfy(n -> {
+                    assertThat(n.getSeverity()).isEqualTo(Severity.WARNING);
+                    assertThat(n.getTitle()).startsWith("ADVERTENCIA: ");
+                    assertThat(n.getBody()).contains("Aún no es crítico", "Detectado a las 12:00");
+                    assertThat(n.getAnnex()).startsWith("Guía – ");
+                });
+        Notification pulse = notificationsFor(HealthParameter.PULSE).get(0);
+        assertThat(pulse.getLevel()).isEqualTo(AlertLevel.HIGH);
+        assertThat(pulse.getTitle()).isEqualTo("ADVERTENCIA: Pulso alto – Ana");
+        assertThat(pulse.getBody()).contains("110 bpm", "10 bpm sobre el máximo normal", "120 bpm o más",
+                "cada 30 minutos");
+        Notification sleep = notificationsFor(HealthParameter.SLEEP).get(0);
+        assertThat(sleep.getLevel()).isEqualTo(AlertLevel.LOW);
+        assertThat(sleep.getTitle()).isEqualTo("ADVERTENCIA: Horas de sueño bajas – Ana");
+        assertThat(sleep.getBody()).contains("1 h bajo el mínimo normal", "4 h o menos");
+    }
+
+    @Test
+    @DisplayName("advertencia: se repite con el intervalo de advertencia (pulso cada 30 min)")
+    void warningRepeatsLessOften() {
+        ASTRONAUTS.put(1, "A", 110, 90.0, 36.6, 8.0);
+        assertThat(monitoring.runCycle()).isEqualTo(1);
+
+        clock.advance(Duration.ofMinutes(15));
         assertThat(monitoring.runCycle()).isZero();
-        assertThat(notificationRepository.count()).isZero();
+        clock.advance(Duration.ofMinutes(15));
+        assertThat(monitoring.runCycle()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("de alto a muy alto: alerta URGENTE de inmediato, indicando que empeoró")
+    void escalationFromWarningToCritical() {
+        ASTRONAUTS.put(1, "A", 110, 90.0, 36.6, 8.0);
+        monitoring.runCycle();
+
+        clock.advance(Duration.ofMinutes(2));
+        ASTRONAUTS.put(1, "A", 135, 90.0, 36.6, 8.0);
+        assertThat(monitoring.runCycle()).isEqualTo(1);
+
+        List<Notification> pulse = notificationsFor(HealthParameter.PULSE);
+        assertThat(pulse).extracting(Notification::getSeverity)
+                .containsExactlyInAnyOrder(Severity.WARNING, Severity.CRITICAL);
+        Notification urgent = pulse.stream().filter(n -> n.getSeverity() == Severity.CRITICAL).findFirst().orElseThrow();
+        assertThat(urgent.getBody()).contains("Empeoró", "estaba alto");
+    }
+
+    @Test
+    @DisplayName("de muy alto a alto: nueva advertencia indicando que mejoró")
+    void deEscalation() {
+        ASTRONAUTS.put(1, "A", 135, 90.0, 36.6, 8.0);
+        monitoring.runCycle();
+
+        clock.advance(Duration.ofMinutes(2));
+        ASTRONAUTS.put(1, "A", 110, 90.0, 36.6, 8.0);
+        assertThat(monitoring.runCycle()).isEqualTo(1);
+
+        Notification last = notificationsFor(HealthParameter.PULSE).stream()
+                .filter(n -> n.getLevel() == AlertLevel.HIGH).findFirst().orElseThrow();
+        assertThat(last.getBody()).contains("Mejoró", "sigue fuera del rango normal");
     }
 
     @Test

@@ -59,6 +59,19 @@ public class HealthRangeClassifier {
         return Optional.empty();
     }
 
+    /**
+     * Límite de un rango: min=true devuelve el mínimo, si no el máximo.
+     * Ej. bound("pulse", NORMAL, false) = 100; bound("pulse", VERY_HIGH, true) = 120.
+     */
+    public Optional<Double> bound(String parameter, HealthStatus status, boolean min) {
+        ParameterDef def = parameters.get(parameter);
+        RangeDef range = def == null || def.ranges() == null ? null : def.ranges().get(status.jsonKey());
+        if (range == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(min ? range.min() : range.max());
+    }
+
     /** Texto del rango normal, ej. "60 – 100". */
     public String normalRange(String parameter) {
         ParameterDef def = parameters.get(parameter);

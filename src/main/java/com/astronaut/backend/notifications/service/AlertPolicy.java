@@ -9,10 +9,10 @@ import java.util.Optional;
 
 /**
  * Regla de cuándo notificar (lógica pura, sin base de datos):
- *  - apenas un valor llega a muy alto / muy bajo  -> NOTIFY
- *  - si pasa de muy bajo a muy alto (o al revés)   -> NOTIFY
- *  - si sigue crítico y ya pasó el intervalo       -> NOTIFY (15 min pulso, 30 azúcar y temperatura, 1 día sueño)
- *  - si vuelve a un nivel no crítico               -> CLEAR (la próxima vez avisa de inmediato)
+ *  - apenas un valor sale del rango normal (bajo, alto, muy bajo, muy alto) -> NOTIFY
+ *  - si cambia de nivel (p. ej. alto -> muy alto, o muy bajo -> muy alto)    -> NOTIFY de inmediato
+ *  - si sigue en el mismo nivel y ya pasó el intervalo                       -> NOTIFY
+ *  - si vuelve al rango normal                                               -> CLEAR (la próxima vez avisa de inmediato)
  */
 public final class AlertPolicy {
 

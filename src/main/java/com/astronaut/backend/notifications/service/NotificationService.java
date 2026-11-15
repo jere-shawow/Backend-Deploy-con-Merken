@@ -72,18 +72,26 @@ public class NotificationService {
         return repository.save(n);
     }
 
-    /** Notificación automática por nivel muy alto / muy bajo. */
+    /** Notificación automática: advertencia (bajo / alto) o urgente (muy bajo / muy alto). */
     public Notification createAlert(Long astronautId, String astronautName, HealthParameter parameter,
                                     AlertLevel level, double value) {
+        return createAlert(astronautId, astronautName, parameter, level, null, value);
+    }
+
+    /** previous: nivel del aviso anterior (null si es el primero) para explicar si empeoró o mejoró. */
+    public Notification createAlert(Long astronautId, String astronautName, HealthParameter parameter,
+                                    AlertLevel level, AlertLevel previous, double value) {
         Instant now = clock.instant();
         Notification n = new Notification();
         n.setAstronautId(astronautId);
         n.setAstronautName(astronautName);
         n.setParameter(parameter);
         n.setLevel(level);
+        n.setSeverity(level.severity());
         n.setMeasuredValue(value);
         n.setTitle(guides.title(parameter, level, astronautName));
-        n.setBody(guides.body(parameter, level, value, astronautName, properties.repeatInterval(parameter), now));
+        n.setBody(guides.body(parameter, level, previous, value, astronautName,
+                properties.repeatInterval(parameter, level), now));
         n.setAnnex(guides.annex(parameter, level));
         n.setCreatedAt(now);
         n.setExpiresAt(now.plus(properties.timeout()));

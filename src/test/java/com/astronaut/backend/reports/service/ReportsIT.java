@@ -2,6 +2,7 @@ package com.astronaut.backend.reports.service;
 
 import com.astronaut.backend.reports.client.AstronautDataSource;
 import com.astronaut.backend.reports.client.NotificationSource;
+import com.astronaut.backend.reports.model.AstronautData;
 import com.astronaut.backend.reports.model.NotificationData;
 import com.astronaut.backend.reports.store.LocalReportStore;
 import com.astronaut.backend.reports.support.FakeServices;
@@ -155,9 +156,47 @@ class ReportsIT {
                 .andExpect(jsonPath("$.astronauts[0].bodyBattery.last").value(64.0))
                 .andExpect(jsonPath("$.astronauts[0].hrv.avg").value(48.0))
                 .andExpect(jsonPath("$.astronauts[0].alerts").value(1))
+                .andExpect(jsonPath("$.astronauts[0].criticalAlerts").value(1))
+                .andExpect(jsonPath("$.astronauts[0].warningAlerts").value(0))
                 .andExpect(jsonPath("$.comments", hasSize(1)))
                 .andExpect(jsonPath("$.comments[0].time").value("2026-11-14T14:30:00Z"))
                 .andExpect(jsonPath("$.comments[0].title").value(containsString("Pulso muy alto")));
+    }
+
+    @Test
+    @DisplayName("cada 10 min se AGREGA una medición (no se sobrescribe): 12:00 -> 36 °C, 12:10 -> 37 °C")
+    void measurementsAreListedNotOverwritten() throws Exception {
+        SERVICES.astronauts.clear();
+        SERVICES.astronauts.add(withTemperature(1, "Valentina", 36.0));
+        service.captureSnapshot();                                   // 12:00
+
+        clock.advance(Duration.ofMinutes(10));
+        SERVICES.astronauts.clear();
+        SERVICES.astronauts.add(withTemperature(1, "Valentina", 37.0));
+        service.captureSnapshot();                                   // 12:10
+
+        mockMvc.perform(get("/api/reports/{id}", "AUTO-2026-11-14"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.timeline", hasSize(1)))
+                .andExpect(jsonPath("$.timeline[0].astronautName").value("Valentina"))
+                .andExpect(jsonPath("$.timeline[0].measurements", hasSize(2)))
+                .andExpect(jsonPath("$.timeline[0].measurements[0].localTime").value("12:00"))
+                .andExpect(jsonPath("$.timeline[0].measurements[0].bodyTemperature").value(36.0))
+                .andExpect(jsonPath("$.timeline[0].measurements[1].localTime").value("12:10"))
+                .andExpect(jsonPath("$.timeline[0].measurements[1].bodyTemperature").value(37.0))
+                .andExpect(jsonPath("$.readings", hasSize(2)))
+                .andExpect(jsonPath("$.readings[0].astronaut.bodyTemperature").value(36.0))
+                .andExpect(jsonPath("$.readings[1].astronaut.bodyTemperature").value(37.0))
+                .andExpect(jsonPath("$.astronauts[0].bodyTemperature.min").value(36.0))
+                .andExpect(jsonPath("$.astronauts[0].bodyTemperature.max").value(37.0))
+                .andExpect(jsonPath("$.astronauts[0].bodyTemperature.last").value(37.0));
+    }
+
+    private static AstronautData withTemperature(long id, String name, double temperature) {
+        AstronautData a = TestData.astronaut(id, name, 70);
+        return new AstronautData(a.id(), a.astronautName(), a.spaceRadiation(), a.distanceFromEarth(),
+                a.bloodPressure(), a.heartRate(), a.bloodSugar(), temperature, a.sleepHours(), a.nutrition(),
+                a.oxygenInBlood(), a.bodyBattery(), a.hrv(), a.mood(), a.garminLinked(), a.garminLastSync());
     }
 
     @Test
@@ -171,7 +210,7 @@ class ReportsIT {
                 .andExpect(content().string(containsString("MEDICIONES")))
                 .andExpect(content().string(containsString("hrv_ms;body_battery")))
                 .andExpect(content().string(containsString("COMENTARIOS")))
-                .andExpect(content().string(containsString("12:00;Valentina;PULSE;VERY_HIGH")));
+                .andExpect(content().string(containsString("12:00;Valentina;urgente;PULSE;VERY_HIGH")));
     }
 
     @Test
