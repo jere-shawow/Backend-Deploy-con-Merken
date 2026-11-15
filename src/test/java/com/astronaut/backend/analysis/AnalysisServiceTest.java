@@ -128,4 +128,8 @@ class AnalysisServiceTest {
         assertThat(c.readings()).allMatch(r->r.measuredAt()==null);
         verifyNoInteractions(gateway);
     }
+    @Test void rejectsSummaryContradictingTheSelectedActivities() {
+        String contradiction=valid().replace("The stored values provide limited context; optional leisure depends on schedule and availability.","No leisure activity is recommended.");
+        assertThatThrownBy(()->service.parse(contradiction,context())).isInstanceOf(ServiceUnavailableException.class);
+    }
 }
