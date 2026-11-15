@@ -10,5 +10,7 @@ import java.util.Optional;
 @Repository
 public interface AlertStateRepository extends JpaRepository<AlertState, Long> {
 
+    java.util.List<AlertState> findByAstronautId(Long astronautId);
+
     Optional<AlertState> findByAstronautIdAndParameter(Long astronautId, HealthParameter parameter);
 }
