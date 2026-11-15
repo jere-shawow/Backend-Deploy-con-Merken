@@ -56,20 +56,23 @@ class AnalysisServiceTest {
         for (List<Reading> values:List.of(List.of(reading,reading),List.of(new Reading("heart_rate",75D,"h",null,"SIMULATED")),List.of(new Reading("heart_rate",Double.NaN,"bpm",null,"SIMULATED"))))
             assertThatThrownBy(()->AnalysisService.validateReadings(values)).isInstanceOf(ResponseStatusException.class);
     }
-    @Test void urgentCoreBypassesModelAndLeisure() {
+    @Test void urgentCoreRemainsIndependentWhileNovaExplainsContext() {
         var c=new Context(List.of(reading),List.of(),"UNKNOWN","UNKNOWN","UNKNOWN",List.of("PULSE:VERY_HIGH"),"IMMEDIATE_PROTOCOL");
+        when(gateway.converse(anyString(),anyString())).thenReturn(new NovaGateway.Reply(valid().replace("[\"READING\"]","[]"),100,80));
         Result r=service.analyze(c);
-        assertThat(r.provider()).isEqualTo("CORE_POLICY");assertThat(r.activities()).isEmpty();
-        verifyNoInteractions(gateway);
+        assertThat(r.provider()).isEqualTo("AWS_BEDROCK");assertThat(r.activities()).isEmpty();
+        assertThat(r.context().coreAction()).isEqualTo("IMMEDIATE_PROTOCOL");
+        assertThat(r.status()).isEqualTo("GENERATED_PROTOCOL_REQUIRED");
     }
     @Test void storedReadingsDoNotUseSyncTimeAsMeasurementTimeOrSendNames() {
         Astronaut a=new Astronaut();a.setAstronautName("PRIVATE_NAME_NEVER_SEND");a.setHeartRate(75);a.setGarminLinked(true);
         a.setGarminLastSync(Instant.now());
         when(astronauts.findById(1L)).thenReturn(a);when(alerts.findByAstronautId(1L)).thenReturn(List.of(new AlertState(1L,HealthParameter.PULSE,AlertLevel.VERY_HIGH,Instant.now())));
+        when(gateway.converse(anyString(),anyString())).thenReturn(new NovaGateway.Reply(valid().replace("[\"READING\"]","[]"),100,80));
         Result r=service.stored(1,new StoredRequest(true,null));
         assertThat(r.context().readings()).hasSize(12).allMatch(v->v.measuredAt()==null);
         assertThat(r.context().readings().getFirst().source()).isEqualTo("GARMIN_LINKED_BACKEND_UNVERIFIED");
-        assertThat(r.status()).isEqualTo("CORE_ACTION_REQUIRED");verifyNoInteractions(gateway);
+        assertThat(r.status()).isEqualTo("GENERATED_PROTOCOL_REQUIRED");
     }
     @Test void cooldownPreventsRepeatedBillableRequests() {
         when(gateway.converse(anyString(),anyString())).thenReturn(new NovaGateway.Reply(valid(),100,80));
@@ -131,5 +134,14 @@ class AnalysisServiceTest {
     @Test void rejectsSummaryContradictingTheSelectedActivities() {
         String contradiction=valid().replace("The stored values provide limited context; optional leisure depends on schedule and availability.","No leisure activity is recommended.");
         assertThatThrownBy(()->service.parse(contradiction,context())).isInstanceOf(ServiceUnavailableException.class);
+    }
+    @Test void acceptsNaturalCombinedSummaryWithoutPerMetricReport() {
+        String natural=valid().replace("[{\"metric\":\"heart_rate\",\"explanation\":\"Pulse alone does not establish exercise readiness.\"}]","[]");
+        assertThat(service.parse(natural,context()).observations()).isEmpty();
+    }
+    @Test void acceptsProvidedDecimalsWithUnitsAndDeclaredConsumerScale() {
+        Context c=new Context(List.of(new Reading("sleep",4.8D,"h",null,"SIMULATED"),new Reading("body_battery",44D,"score_0_100",null,"SIMULATED")),List.of(),"UNKNOWN","UNKNOWN","UNKNOWN",List.of(),"NOT_ASSESSED");
+        String text="{\"summary\":\"Your 4.8h sleep record and Body Battery of 44/100 belong to the same snapshot.\",\"observations\":[],\"uncertainties\":[],\"activityIds\":[],\"sourceIds\":[\"nasa-sleep\"]}";
+        assertThat(service.parse(text,c)).isNotNull();
     }
 }
