@@ -1,4 +1,7 @@
 target/
+.git/
+.github/
+deploy/
 data/
 .env
 .idea/
