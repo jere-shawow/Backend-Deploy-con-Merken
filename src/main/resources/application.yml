@@ -1,7 +1,7 @@
 server:
   port: ${SERVER_PORT:8080}
 
-# Ground station only. Disabled until a server-only token is provisioned.
+# Ground station only. Disabled until a server-only token is provisioned. #
 analysis:
   bedrock:
     enabled: ${BEDROCK_ANALYSIS_ENABLED:false}
