@@ -1,0 +1,144 @@
+{
+  "health_parameters": [
+    {
+      "parameter": "pulse",
+      "name": "Pulso",
+      "unit": "bpm",
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 40,
+          "max_inclusive": false
+        },
+        "low": {
+          "min": 40,
+          "max": 59,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "normal": {
+          "min": 60,
+          "max": 100,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "high": {
+          "min": 101,
+          "max": 120,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "very_high": {
+          "min": 120,
+          "max": null,
+          "min_inclusive": false
+        }
+      }
+    },
+    {
+      "parameter": "glucose",
+      "name": "Glucosa",
+      "unit": "mg/dL",
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 54,
+          "max_inclusive": false
+        },
+        "low": {
+          "min": 54,
+          "max": 69,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "normal": {
+          "min": 70,
+          "max": 99,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "high": {
+          "min": 100,
+          "max": 199,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "very_high": {
+          "min": 200,
+          "max": null,
+          "min_inclusive": true
+        }
+      }
+    },
+    {
+      "parameter": "temperature",
+      "name": "Temperatura corporal",
+      "unit": "C",
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 35,
+          "max_inclusive": false
+        },
+        "low": {
+          "min": 35,
+          "max": 35.9,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "normal": {
+          "min": 36,
+          "max": 37.4,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "high": {
+          "min": 37.5,
+          "max": 39.9,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "very_high": {
+          "min": 40,
+          "max": null,
+          "min_inclusive": true
+        }
+      }
+    },
+    {
+      "parameter": "sleep",
+      "name": "Horas de sueño",
+      "unit": "hours",
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 4,
+          "max_inclusive": false
+        },
+        "low": {
+          "min": 4,
+          "max": 7,
+          "min_inclusive": true,
+          "max_inclusive": false
+        },
+        "normal": {
+          "min": 7,
+          "max": 9,
+          "min_inclusive": true,
+          "max_inclusive": true
+        },
+        "high": {
+          "min": 9,
+          "max": 10,
+          "min_inclusive": false,
+          "max_inclusive": true
+        },
+        "very_high": {
+          "min": 10,
+          "max": null,
+          "min_inclusive": false
+        }
+      }
+    }
+  ]
+}

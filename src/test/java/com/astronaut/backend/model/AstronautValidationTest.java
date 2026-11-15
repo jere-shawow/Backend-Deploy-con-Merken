@@ -69,6 +69,21 @@ class AstronautValidationTest {
     }
 
     @Test
+    @DisplayName("Body Battery 0–100 y HRV 0–300 ms; ambos opcionales")
+    void bodyBatteryAndHrv() {
+        Astronaut a = TestData.astronaut("x");
+        assertThat(invalidFields(a)).isEmpty(); // sin valores también es válido
+
+        a.setBodyBattery(101);
+        a.setHrv(301.0);
+        assertThat(invalidFields(a)).contains("bodyBattery", "hrv");
+
+        a.setBodyBattery(0);
+        a.setHrv(0.0);
+        assertThat(invalidFields(a)).isEmpty();
+    }
+
+    @Test
     @DisplayName("nombre vacío y campos obligatorios nulos")
     void requiredFields() {
         Astronaut a = new Astronaut();

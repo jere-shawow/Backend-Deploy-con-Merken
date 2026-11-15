@@ -1,12 +1,18 @@
-# Credenciales locales (MySQL): NUNCA subir
+# Credenciales locales (MySQL / AWS): NUNCA subir
 .env
 
 # Compilación y base local
 target/
 data/
 
+# Paquetes para subir al EC2 (contienen el .env)
+*.tar.gz
+*.pem
+ec2-user@*
+
 # IDEs y logs
 .idea/
 *.iml
 .vscode/
 *.log
+deploy/astronaut-backend.jar

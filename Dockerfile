@@ -11,6 +11,8 @@ FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/astronaut-backend.jar app.jar
 
-# La conexión a MySQL se configura con variables de entorno (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD...)
+# MySQL (DB_*) y DynamoDB (AWS_*, DYNAMODB_TABLE) se configuran con variables de entorno / .env.
+# Respaldo local de informes (montar un volumen en /app/data para no perderlos)
+ENV REPORTS_LOCAL_DIR=/app/data/reports
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

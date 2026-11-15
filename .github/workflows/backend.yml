@@ -33,6 +33,7 @@ jobs:
           docker run -d --name merken-ci -p 127.0.0.1:8080:8080 \
             -e 'DB_URL=jdbc:h2:mem:ci;DB_CLOSE_DELAY=-1' -e DB_USER=sa \
             -e DB_PLATFORM=h2 -e GARMIN_SYNC_ENABLED=false -e APP_SEED_ENABLED=false \
+            -e NOTIFICATIONS_MONITOR_ENABLED=false -e REPORTS_SCHEDULER_ENABLED=false -e REPORTS_STORAGE=local \
             astronaut-backend:${{ github.sha }}
           curl --fail --silent --show-error --retry 40 --retry-all-errors --retry-delay 3 --max-time 5 http://127.0.0.1:8080/healthz >/dev/null
       - name: Save tested image

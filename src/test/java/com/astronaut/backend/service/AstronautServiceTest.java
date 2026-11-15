@@ -92,8 +92,13 @@ class AstronautServiceTest {
         Astronaut data = new Astronaut("Valentina R.", 1.5, 384_400.0, "130/85", 95, 120.0,
                 37.8, 5.0, 3000, 95.0, Mood.CANSADO);
         data.setGarminLinked(false);
+        data.setBodyBattery(35);
+        data.setHrv(41.5);
 
         Astronaut updated = service.update(1L, data);
+
+        assertThat(updated.getBodyBattery()).isEqualTo(35);
+        assertThat(updated.getHrv()).isEqualTo(41.5);
 
         assertThat(updated.getAstronautName()).isEqualTo("Valentina R.");
         assertThat(updated.getSpaceRadiation()).isEqualTo(1.5);

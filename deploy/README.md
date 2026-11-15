@@ -33,3 +33,5 @@ service backend, existing port binding preserved, health /healthz.
 The frontend EC2 role has only AmazonSSMManagedInstanceCore. The backend role
 retains SSM and limited Amazon Nova Pro invocation. Bedrock is for the ground
 backend; Android SLM inference remains offline.
+
+The previous SSH deployment guide is preserved in legacy-ssh.md for reference only. The active pipeline uses SSM.

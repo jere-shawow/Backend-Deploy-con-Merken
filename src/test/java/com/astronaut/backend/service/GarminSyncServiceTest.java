@@ -55,7 +55,7 @@ class GarminSyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new GarminSyncService(linkRepository, astronautRepository, garmin, 10);
+        service = new GarminSyncService(linkRepository, astronautRepository, garmin, 10, 60);
 
         astronaut = TestData.astronaut("Valentina");
         astronaut.setId(1L);
@@ -136,6 +136,46 @@ class GarminSyncServiceTest {
 
         verify(garmin, times(3)).getDailyHeartRate(any(), eq(TODAY));
         verify(garmin, times(1)).getDailySleep(any(), eq(TODAY));
+    }
+
+    @Test
+    @DisplayName("Body Battery (máx. 1 vez por minuto) y HRV (junto con el sueño) llegan desde Garmin")
+    void bodyBatteryAndHrv() {
+        JsonNode bbJson = JsonNodeFactory.instance.arrayNode();
+        JsonNode hrvJson = JsonNodeFactory.instance.objectNode();
+        when(linkRepository.findAll()).thenReturn(List.of(link));
+        when(garmin.getDailyBodyBattery(any(), eq(TODAY))).thenReturn(bbJson);
+        when(garmin.getDailyHrv(any(), eq(TODAY))).thenReturn(hrvJson);
+        when(garmin.latestBodyBattery(bbJson)).thenReturn(Optional.of(55));
+        when(garmin.hrvLastNight(hrvJson)).thenReturn(Optional.of(42.0));
+
+        service.syncAll();
+        service.syncAll();
+
+        assertThat(astronaut.getBodyBattery()).isEqualTo(55);
+        assertThat(astronaut.getHrv()).isEqualTo(42.0);
+        verify(garmin, times(1)).getDailyBodyBattery(any(), eq(TODAY));
+        verify(garmin, times(1)).getDailyHrv(any(), eq(TODAY));
+        verify(garmin, times(2)).getDailyHeartRate(any(), eq(TODAY));
+    }
+
+    @Test
+    @DisplayName("Body Battery fuera de 0–100 o HRV fuera de rango se ignoran")
+    void ignoresImpossibleBodyBatteryAndHrv() {
+        when(linkRepository.findAll()).thenReturn(List.of(link));
+        astronaut.setBodyBattery(50);
+        astronaut.setHrv(40.0);
+        JsonNode bbJson = JsonNodeFactory.instance.arrayNode();
+        JsonNode hrvJson = JsonNodeFactory.instance.objectNode();
+        when(garmin.getDailyBodyBattery(any(), eq(TODAY))).thenReturn(bbJson);
+        when(garmin.getDailyHrv(any(), eq(TODAY))).thenReturn(hrvJson);
+        when(garmin.latestBodyBattery(bbJson)).thenReturn(Optional.of(150));
+        when(garmin.hrvLastNight(hrvJson)).thenReturn(Optional.of(900.0));
+
+        service.syncAll();
+
+        assertThat(astronaut.getBodyBattery()).isEqualTo(50);
+        assertThat(astronaut.getHrv()).isEqualTo(40.0);
     }
 
     @Test

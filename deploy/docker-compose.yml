@@ -1,0 +1,36 @@
+# Producción en el EC2 (lo usa deploy.sh, llamado por GitHub Actions).
+#   docker compose up -d --build     levantar / actualizar
+#   docker compose logs -f backend   ver logs
+#   docker compose down              detener
+#
+# Configuración: archivo .env en la misma carpeta (NO se sube a git):
+#   MySQL     -> DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+#   DynamoDB  -> AWS_REGION, DYNAMODB_TABLE (+ AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY si no hay rol IAM)
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: astronaut-backend:latest
+    container_name: astronaut-backend
+    env_file:
+      - .env
+    environment:
+      SERVER_PORT: "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      # informes guardados en local mientras no haya conexión con DynamoDB
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -43,7 +43,7 @@ class GarminControllerIT extends AbstractIntegrationTest {
     @DisplayName("vincular con key válida: 200, guarda el vínculo y trae pulso y sueño de Garmin")
     void linkWithValidKey() throws Exception {
         Astronaut a = saved();
-        GARMIN.heartRate(91).sleepSeconds(25_200); // 7 h
+        GARMIN.heartRate(91).sleepSeconds(25_200).bodyBattery(66).hrv(48); // 7 h de sueño
 
         mockMvc.perform(put("/api/astronauts/{id}/garmin", a.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -57,6 +57,8 @@ class GarminControllerIT extends AbstractIntegrationTest {
         Astronaut updated = astronautRepository.findById(a.getId()).orElseThrow();
         assertThat(updated.getHeartRate()).isEqualTo(91);
         assertThat(updated.getSleepHours()).isEqualTo(7.0);
+        assertThat(updated.getBodyBattery()).isEqualTo(66);
+        assertThat(updated.getHrv()).isEqualTo(48.0);
         assertThat(updated.getGarminLinked()).isTrue();
         assertThat(updated.getGarminLastSync()).isNotNull();
         assertThat(garminLinkRepository.findByAstronautId(a.getId())).isPresent();

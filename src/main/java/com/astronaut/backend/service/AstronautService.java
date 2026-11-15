@@ -57,6 +57,8 @@ public class AstronautService {
         existing.setSleepHours(data.getSleepHours());
         existing.setNutrition(data.getNutrition());
         existing.setOxygenInBlood(data.getOxygenInBlood());
+        existing.setBodyBattery(data.getBodyBattery());
+        existing.setHrv(data.getHrv());
         existing.setMood(data.getMood());
         return repository.save(existing);
     }

@@ -25,11 +25,17 @@ spring:
       continue-on-error: false
   jpa:
     hibernate:
-      # update: crea/actualiza SOLO las tablas de esta app (astronauts, garmin_links, app_settings);
+      # update: crea/actualiza SOLO las tablas de esta app (astronauts, garmin_links, app_settings,
+      # notifications, notification_alert_states);
       # nunca borra tablas ni columnas existentes.
       ddl-auto: update
     open-in-view: false
     show-sql: false
+  # Garmin, monitor de notificaciones e informes corren en paralelo
+  task:
+    scheduling:
+      pool:
+        size: 4
     properties:
       hibernate:
         jdbc:
@@ -42,9 +48,60 @@ garmin:
   time-zone: ${GARMIN_TIME_ZONE:America/Santiago}
   # El sueño cambia una vez al día: se consulta cada N minutos (el pulso, en cada vuelta)
   sleep-refresh-minutes: ${GARMIN_SLEEP_REFRESH_MINUTES:10}
+  # Body Battery cambia durante el día: como máximo 1 consulta cada N segundos
+  body-battery-refresh-seconds: ${GARMIN_BODY_BATTERY_REFRESH_SECONDS:60}
   sync:
     # Tarea programada de sincronización (se apaga en las pruebas)
     enabled: ${GARMIN_SYNC_ENABLED:true}
+
+# ---------------------------------------------------------------------------
+# Notificaciones de salud (tablas en MySQL)
+# ---------------------------------------------------------------------------
+notifications:
+  # Cada cuántos segundos se revisan los niveles (las alertas salen "apenas" se detectan)
+  poll-seconds: ${NOTIFICATIONS_POLL_SECONDS:10}
+  # Zona horaria de la hora que aparece en el cuerpo de las notificaciones
+  time-zone: ${NOTIFICATIONS_TIME_ZONE:America/Santiago}
+  # Vigencia de cada notificación
+  timeout-hours: ${NOTIFICATIONS_TIMEOUT_HOURS:24}
+  # Repetición mientras el valor siga muy alto / muy bajo
+  repeat-minutes:
+    pulse: 15
+    glucose: 30
+    temperature: 30
+    sleep: 1440   # 1 vez al día
+  monitor:
+    enabled: ${NOTIFICATIONS_MONITOR_ENABLED:true}
+
+# ---------------------------------------------------------------------------
+# Informes diarios: base NO relacional AWS DynamoDB (respaldo local si no hay conexión)
+# ---------------------------------------------------------------------------
+reports:
+  time-zone: ${REPORTS_TIME_ZONE:America/Santiago}
+  # Cada cuántos minutos se agregan los datos al informe del día
+  snapshot-interval-minutes: ${REPORTS_SNAPSHOT_MINUTES:10}
+  # Retención si no se puede leer la configuración (la real: reportRetentionDays en /api/settings)
+  default-retention-days: 7
+  # Respaldo local (archivos JSON) cuando DynamoDB no está disponible
+  local-dir: ${REPORTS_LOCAL_DIR:./data/reports}
+  # Cada cuántos segundos se reintenta conectar a DynamoDB estando en modo local
+  storage-check-seconds: ${REPORTS_STORAGE_CHECK_SECONDS:60}
+  scheduler:
+    enabled: ${REPORTS_SCHEDULER_ENABLED:true}
+  # Salida de los informes:
+  #   dynamodb -> AWS DynamoDB; si no hay conexión guarda en local y avisa (por defecto)
+  #   local    -> solo archivos JSON en local-dir (sin AWS)
+  storage: ${REPORTS_STORAGE:dynamodb}
+  dynamodb:
+    table: ${DYNAMODB_TABLE:astronaut-reports}
+    region: ${AWS_REGION:us-east-1}
+    # Vacío = DynamoDB de AWS. Para DynamoDB Local: http://localhost:8000
+    endpoint: ${DYNAMODB_ENDPOINT:}
+    # Vacíos = cadena de credenciales de AWS (variables, ~/.aws o el ROL IAM del EC2)
+    access-key-id: ${AWS_ACCESS_KEY_ID:}
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+    # Crear la tabla si no existe (requiere dynamodb:CreateTable)
+    create-table: ${DYNAMODB_CREATE_TABLE:true}
 
 # Datos de ejemplo al arrancar con la base vacía.
 # Apagado por defecto: en MySQL se usan los datos reales (se activa en el perfil h2 y en E2E).

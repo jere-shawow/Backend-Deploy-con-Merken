@@ -33,6 +33,8 @@ import java.time.Instant;
  *  - sleepHours        : horas
  *  - nutrition         : kcal/día (ingesta calórica diaria)
  *  - oxygenInBlood     : % SpO2 (saturación de oxígeno)
+ *  - bodyBattery       : 0–100 (energía de Garmin; opcional, manual o desde Garmin)
+ *  - hrv               : ms (variabilidad de la frecuencia cardíaca, promedio nocturno; opcional)
  */
 @Entity
 @Table(name = "astronauts")
@@ -96,6 +98,18 @@ public class Astronaut {
     @DecimalMax(value = "100.0", message = "El oxígeno en sangre no puede superar 100%")
     @Column(name = "oxygen_in_blood")
     private Double oxygenInBlood;
+
+    /** Opcional: se ingresa a mano o llega desde Garmin. */
+    @Min(value = 0, message = "Body Battery no puede ser menor que 0")
+    @Max(value = 100, message = "Body Battery no puede ser mayor que 100")
+    @Column(name = "body_battery")
+    private Integer bodyBattery;
+
+    /** Opcional: VFC/HRV en milisegundos, manual o desde Garmin. */
+    @DecimalMin(value = "0.0", message = "HRV no puede ser negativa")
+    @DecimalMax(value = "300.0", message = "HRV fuera de rango (máximo 300 ms)")
+    @Column(name = "hrv")
+    private Double hrv;
 
     @NotNull(message = "El estado de ánimo es obligatorio")
     @Enumerated(EnumType.STRING)
@@ -164,6 +178,12 @@ public class Astronaut {
 
     public Double getOxygenInBlood() { return oxygenInBlood; }
     public void setOxygenInBlood(Double oxygenInBlood) { this.oxygenInBlood = oxygenInBlood; }
+
+    public Integer getBodyBattery() { return bodyBattery; }
+    public void setBodyBattery(Integer bodyBattery) { this.bodyBattery = bodyBattery; }
+
+    public Double getHrv() { return hrv; }
+    public void setHrv(Double hrv) { this.hrv = hrv; }
 
     public Mood getMood() { return mood; }
     public void setMood(Mood mood) { this.mood = mood; }

@@ -25,7 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
- * Vincula astronautas con Garmin y sincroniza HeartRate y SleepHours.
+ * Vincula astronautas con Garmin y sincroniza HeartRate, SleepHours, BodyBattery y HRV
+ * (todas con el mismo token JWT de la Personal API).
  *
  * {@link #syncAll()} lo ejecuta el planificador cada N segundos
  * (N = refreshIntervalSeconds de las settings globales).
@@ -39,20 +40,25 @@ public class GarminSyncService {
     private final AstronautRepository astronautRepository;
     private final GarminApiClient garmin;
     private final Duration sleepRefresh;
+    private final Duration bodyBatteryRefresh;
 
     /** Tokens de acceso en memoria, por astronauta (válidos ~24 h). */
     private final Map<Long, AccessToken> tokens = new ConcurrentHashMap<>();
     /** Última consulta de sueño, por astronauta (el sueño cambia una vez al día). */
     private final Map<Long, Instant> lastSleepFetch = new ConcurrentHashMap<>();
+    /** Última consulta de Body Battery, por astronauta (como máximo 1 vez por minuto). */
+    private final Map<Long, Instant> lastBodyBatteryFetch = new ConcurrentHashMap<>();
 
     public GarminSyncService(GarminLinkRepository linkRepository,
                              AstronautRepository astronautRepository,
                              GarminApiClient garmin,
-                             @Value("${garmin.sleep-refresh-minutes:10}") long sleepRefreshMinutes) {
+                             @Value("${garmin.sleep-refresh-minutes:10}") long sleepRefreshMinutes,
+                             @Value("${garmin.body-battery-refresh-seconds:60}") long bodyBatteryRefreshSeconds) {
         this.linkRepository = linkRepository;
         this.astronautRepository = astronautRepository;
         this.garmin = garmin;
         this.sleepRefresh = Duration.ofMinutes(sleepRefreshMinutes);
+        this.bodyBatteryRefresh = Duration.ofSeconds(bodyBatteryRefreshSeconds);
     }
 
     // ---------------------------------------------------------- vínculos
@@ -87,7 +93,7 @@ public class GarminSyncService {
         astronautRepository.save(astronaut);
 
         tokens.put(astronautId, token);
-        lastSleepFetch.remove(astronautId);
+        clearCaches(astronautId);
         syncOne(link);
         return GarminLinkStatus.of(link);
     }
@@ -99,7 +105,7 @@ public class GarminSyncService {
         astronaut.setGarminLinked(false);
         astronautRepository.save(astronaut);
         tokens.remove(astronautId);
-        lastSleepFetch.remove(astronautId);
+        clearCaches(astronautId);
     }
 
     /** Sincronización manual de un astronauta. */
@@ -109,7 +115,7 @@ public class GarminSyncService {
         GarminLink link = linkRepository.findByAstronautId(astronautId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "El astronauta " + astronautId + " no tiene un dispositivo Garmin vinculado"));
-        lastSleepFetch.remove(astronautId);
+        clearCaches(astronautId);
         syncOne(link);
         return GarminLinkStatus.of(link);
     }
@@ -147,13 +153,32 @@ public class GarminSyncService {
                 changed = true;
             }
 
+            // Body Battery cambia durante el día: como máximo 1 consulta por minuto
+            Instant lastBb = lastBodyBatteryFetch.get(astronautId);
+            if (lastBb == null || Instant.now().isAfter(lastBb.plus(bodyBatteryRefresh))) {
+                Optional<Integer> bodyBattery = garmin.latestBodyBattery(
+                        withToken(link, token -> garmin.getDailyBodyBattery(token, today)));
+                lastBodyBatteryFetch.put(astronautId, Instant.now());
+                if (bodyBattery.isPresent() && bodyBattery.get() >= 0 && bodyBattery.get() <= 100) {
+                    astronaut.setBodyBattery(bodyBattery.get());
+                    changed = true;
+                }
+            }
+
+            // Sueño y HRV se calculan una vez por noche: cada garmin.sleep-refresh-minutes
             Instant lastSleep = lastSleepFetch.get(astronautId);
             if (lastSleep == null || Instant.now().isAfter(lastSleep.plus(sleepRefresh))) {
                 Optional<Double> sleep = garmin.sleepHours(
                         withToken(link, token -> garmin.getDailySleep(token, today)));
+                Optional<Double> hrv = garmin.hrvLastNight(
+                        withToken(link, token -> garmin.getDailyHrv(token, today)));
                 lastSleepFetch.put(astronautId, Instant.now());
                 if (sleep.isPresent() && sleep.get() >= 0 && sleep.get() <= 24) {
                     astronaut.setSleepHours(sleep.get());
+                    changed = true;
+                }
+                if (hrv.isPresent() && hrv.get() >= 0 && hrv.get() <= 300) {
+                    astronaut.setHrv(hrv.get());
                     changed = true;
                 }
             }
@@ -198,6 +223,11 @@ public class GarminSyncService {
             tokens.put(link.getAstronautId(), token);
         }
         return token;
+    }
+
+    private void clearCaches(Long astronautId) {
+        lastSleepFetch.remove(astronautId);
+        lastBodyBatteryFetch.remove(astronautId);
     }
 
     private Astronaut requireAstronaut(Long id) {

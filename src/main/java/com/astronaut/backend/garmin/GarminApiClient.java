@@ -10,13 +10,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.util.UriBuilder;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Cliente HTTP para la Garmin Connect Personal API (oficial).
@@ -27,6 +30,9 @@ import java.util.Optional;
  *     Ojo: si se pide "Accept: application/json" Garmin rechaza la petición.
  *  2. GET  {base}/wellness-service/wellness/dailyHeartRate?date=YYYY-MM-DD   (Bearer)
  *  3. GET  {base}/sleep-service/sleep/dailySleep?date=YYYY-MM-DD             (Bearer)
+ *  4. GET  {base}/wellness-service/wellness/bodyBattery/reports/daily?startDate=..&endDate=..  (Bearer)
+ *  5. GET  {base}/hrv-service/hrv/YYYY-MM-DD                                  (Bearer)
+ *  Todas las consultas de datos usan el mismo JWT obtenido en el paso 1.
  */
 @Component
 public class GarminApiClient {
@@ -34,6 +40,8 @@ public class GarminApiClient {
     static final String TOKEN_PATH = "/personalapitoken-service/personal-api/personal-api-key/token";
     static final String HEART_RATE_PATH = "/wellness-service/wellness/dailyHeartRate";
     static final String SLEEP_PATH = "/sleep-service/sleep/dailySleep";
+    static final String BODY_BATTERY_PATH = "/wellness-service/wellness/bodyBattery/reports/daily";
+    static final String HRV_PATH = "/hrv-service/hrv/{date}";
 
     /** Garmin no devuelve refresh tokens; si el JWT no trae "exp" asumimos ~23 h. */
     private static final Duration DEFAULT_TOKEN_TTL = Duration.ofHours(23);
@@ -159,10 +167,27 @@ public class GarminApiClient {
         return get(token, SLEEP_PATH, date);
     }
 
+    /** Body Battery del día (lista de reportes diarios; se pide solo un día). */
+    public JsonNode getDailyBodyBattery(AccessToken token, LocalDate date) {
+        return call(token, BODY_BATTERY_PATH, b -> b.path(BODY_BATTERY_PATH)
+                .queryParam("startDate", date.toString())
+                .queryParam("endDate", date.toString())
+                .build());
+    }
+
+    /** HRV de la noche que terminó en la fecha indicada. */
+    public JsonNode getDailyHrv(AccessToken token, LocalDate date) {
+        return call(token, HRV_PATH, b -> b.path("/hrv-service/hrv/" + date).build());
+    }
+
     private JsonNode get(AccessToken token, String path, LocalDate date) {
+        return call(token, path, b -> b.path(path).queryParam("date", date.toString()).build());
+    }
+
+    private JsonNode call(AccessToken token, String path, Function<UriBuilder, URI> uri) {
         try {
             return restClient.get()
-                    .uri(b -> b.path(path).queryParam("date", date.toString()).build())
+                    .uri(uri)
                     .accept(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + token.value())
                     .retrieve()
@@ -198,6 +223,57 @@ public class GarminApiClient {
         }
         JsonNode resting = dailyHeartRate.path("restingHeartRate");
         return resting.isNumber() ? Optional.of(resting.asInt()) : Optional.empty();
+    }
+
+    /**
+     * Último nivel de Body Battery del día.
+     * La respuesta es una lista de reportes diarios (o un solo reporte); cada uno trae
+     * bodyBatteryValuesArray = [[timestamp, nivel], ...]. Se toma el último nivel no nulo.
+     */
+    public Optional<Integer> latestBodyBattery(JsonNode bodyBattery) {
+        if (bodyBattery == null || bodyBattery.isNull()) {
+            return Optional.empty();
+        }
+        JsonNode report = bodyBattery.isArray()
+                ? (bodyBattery.isEmpty() ? null : bodyBattery.get(bodyBattery.size() - 1))
+                : bodyBattery;
+        if (report == null) {
+            return Optional.empty();
+        }
+        JsonNode values = report.path("bodyBatteryValuesArray");
+        if (values.isArray()) {
+            for (int i = values.size() - 1; i >= 0; i--) {
+                JsonNode sample = values.get(i);
+                if (sample != null && sample.isArray() && sample.size() > 1 && sample.get(1).isNumber()) {
+                    return Optional.of(sample.get(1).asInt());
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * HRV (ms) de la última noche: hrvSummary.lastNightAvg; si no está, la última lectura
+     * de hrvReadings.
+     */
+    public Optional<Double> hrvLastNight(JsonNode hrv) {
+        if (hrv == null || hrv.isNull()) {
+            return Optional.empty();
+        }
+        JsonNode avg = hrv.path("hrvSummary").path("lastNightAvg");
+        if (avg.isNumber()) {
+            return Optional.of(avg.asDouble());
+        }
+        JsonNode readings = hrv.path("hrvReadings");
+        if (readings.isArray()) {
+            for (int i = readings.size() - 1; i >= 0; i--) {
+                JsonNode value = readings.get(i).path("hrvValue");
+                if (value.isNumber()) {
+                    return Optional.of(value.asDouble());
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /** Horas dormidas (sleepTimeSeconds / 3600, 1 decimal). */

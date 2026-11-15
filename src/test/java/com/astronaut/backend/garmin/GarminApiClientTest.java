@@ -150,6 +150,29 @@ class GarminApiClientTest {
         }
 
         @Test
+        @DisplayName("Body Battery: último nivel del día, con el mismo JWT")
+        void readsBodyBattery() {
+            garmin.bodyBattery(57);
+            AccessToken token = client.obtainToken(FakeGarminServer.VALID_KEY);
+
+            JsonNode json = client.getDailyBodyBattery(token, LocalDate.of(2026, 11, 14));
+
+            assertThat(client.latestBodyBattery(json)).contains(57);
+            assertThat(garmin.bodyBatteryRequests()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("HRV: promedio de la última noche, con el mismo JWT")
+        void readsHrv() {
+            garmin.hrv(51);
+            AccessToken token = client.obtainToken(FakeGarminServer.VALID_KEY);
+
+            JsonNode json = client.getDailyHrv(token, LocalDate.of(2026, 11, 14));
+
+            assertThat(client.hrvLastNight(json)).contains(51.0);
+        }
+
+        @Test
         @DisplayName("token rechazado en datos -> GarminException de autenticación")
         void invalidBearer() {
             AccessToken fake = new AccessToken("not-issued", Instant.now().plusSeconds(60));
@@ -202,6 +225,24 @@ class GarminApiClientTest {
         @DisplayName("sueño nulo devuelve vacío")
         void noSleep() throws Exception {
             assertThat(client.sleepHours(MAPPER.readTree("{\"dailySleepDTO\":{\"sleepTimeSeconds\":null}}"))).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Body Battery como objeto (formato de la librería Python) y sin muestras")
+        void bodyBatteryFormats() throws Exception {
+            JsonNode single = MAPPER.readTree("{\"bodyBatteryValuesArray\":[[1,12],[2,25],[3,null]]}");
+            assertThat(client.latestBodyBattery(single)).contains(25);
+            assertThat(client.latestBodyBattery(MAPPER.readTree("[]"))).isEmpty();
+            assertThat(client.latestBodyBattery(null)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("HRV sin resumen usa la última lectura; sin datos devuelve vacío")
+        void hrvFallback() throws Exception {
+            JsonNode readings = MAPPER.readTree(
+                    "{\"hrvSummary\":{\"lastNightAvg\":null},\"hrvReadings\":[{\"hrvValue\":37},{\"hrvValue\":22}]}");
+            assertThat(client.hrvLastNight(readings)).contains(22.0);
+            assertThat(client.hrvLastNight(MAPPER.readTree("{}"))).isEmpty();
         }
 
         @Test

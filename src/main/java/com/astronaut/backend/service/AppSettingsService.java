@@ -33,9 +33,19 @@ public class AppSettingsService {
     public AppSettings update(AppSettings data) {
         AppSettings settings = get();
         settings.setRefreshIntervalSeconds(data.getRefreshIntervalSeconds());
+        // si no se ingresa un valor, los informes se conservan 7 días
+        settings.setReportRetentionDays(data.getReportRetentionDays() == null
+                ? AppSettings.DEFAULT_REPORT_RETENTION_DAYS
+                : data.getReportRetentionDays());
         AppSettings saved = repository.save(settings);
         cachedRefreshSeconds.set(saved.getRefreshIntervalSeconds());
         return saved;
+    }
+
+    /** Días de retención de informes vigentes. */
+    @Transactional
+    public int getReportRetentionDays() {
+        return get().effectiveReportRetentionDays();
     }
 
     /** Intervalo actual en segundos (sin ir a la base en cada consulta). */
