@@ -72,8 +72,10 @@ One in-flight request per process and a ten-second cooldown limit accidental
 duplicate billing. This is not a global budget or distributed quota. Converse
 has a 45-second deadline, no SDK retries and at most 1,800 output tokens.
 Usage and elapsed time are returned. Output must satisfy the exact schema,
-metric set, allowed activity IDs and source allowlist; prose with digits or
-some explicit unsafe phrases is rejected. Truncated, malformed and rejected
+metric set, allowed activity IDs and source allowlist; numerical values absent
+from the supplied readings and some explicit unsafe phrases are rejected.
+Recognizing a number does not prove the model used it with the correct meaning
+or unit; this check cannot establish factual accuracy. Truncated, malformed and rejected
 responses return 503, with no template silently substituted as model output.
 These checks do not establish factual, English-language or clinical accuracy
 of arbitrary generated prose; human review is required. Keep alerts independent.

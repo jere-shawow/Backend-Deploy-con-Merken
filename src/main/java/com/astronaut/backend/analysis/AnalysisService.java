@@ -39,7 +39,7 @@ public class AnalysisService {
         Explain every current metric once, using its canonical metric ID. Distinguish measurement from
         interpretation. Identify how sleep, pulse, HRV and Body Battery may be considered together, but
         never infer a diagnosis, cause, fitness for duty or readiness to exercise from these readings.
-        No invented numbers, normal ranges, thresholds, calculated trends, medical claims, prescriptions,
+        You may quote supplied readings. No invented numbers, normal ranges, thresholds, calculated trends, medical claims, prescriptions,
         medication, treatment, exercise dose or promises of benefit. Do not label values normal or abnormal.
         Source labels, units and values must not be changed. GARMIN_LINKED_BACKEND_UNVERIFIED means only
         the account is linked: field provenance is not independently verified; other values may be mixed.
@@ -48,14 +48,15 @@ public class AnalysisService {
         verified independent measurement times. Explain history limitations. Distance is mission context,
         not a physiological health indicator. Nutrition lacks a verified intake interval; radiation lacks
         a verified accumulation interval. Body Battery is a consumer score, not a medical clearance.
+        Do not assign low, moderate or high energy categories from a score or invent personal baselines.
         There is no trusted current exercise clearance or assigned mission plan. Recommend no exercise.
         activityIds may contain zero to two IDs from allowedActivities, conditional on time and availability.
         Explain in summary why conditional leisure may be an option without claiming it treats these metrics.
         A core action other than NOT_ASSESSED forbids leisure; do not replace or downgrade alerts.
         Source IDs are only jaxa-life (describes ISS leisure), project-leisure and project-policy.
         These are contextual references, not clinical evidence. No URLs or invented citations.
-        Do not repeat any numbers in prose, including metric abbreviations containing digits;
-        original values are attached separately. Write 'oxygen saturation' rather than an abbreviation.
+        Quote only numeric values explicitly supplied in readings. No new numerical ranges or targets.
+        Original values are also attached separately. No Markdown or code fences: start with { and end with }.
         At most 160 words in summary, at most 60 words per metric and 2 to 6 uncertainties.
         All prose must be in English. Do not include names, identifying information or credentials.
         """;
@@ -187,6 +188,17 @@ public class AnalysisService {
                     || !context.coreAction().equals("NOT_ASSESSED")&&!n.activityIds().isEmpty()
                     || n.sourceIds().stream().anyMatch(id->!Set.of("jaxa-life","project-leisure","project-policy").contains(id)))
                 throw new IllegalArgumentException();
+            if (CARDS.stream().filter(c->n.activityIds().contains(c.id()))
+                    .anyMatch(c->!n.sourceIds().contains(c.sourceId()))) throw new IllegalArgumentException();
+            Set<Double> supplied=new HashSet<>();
+            context.readings().forEach(r->{if(r.value()!=null)supplied.add(r.value());});
+            context.history().forEach(h->h.readings().forEach(r->{if(r.value()!=null)supplied.add(r.value());}));
+            List<String> prose=new ArrayList<>(n.uncertainties());prose.add(n.summary());
+            n.observations().forEach(o->prose.add(o.explanation()));
+            for (String s:prose) {
+                var numeric=java.util.regex.Pattern.compile("(?<![A-Za-z_0-9])[-+]?\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?(?![A-Za-z_0-9])").matcher(s);
+                while(numeric.find()) if(!supplied.contains(Double.valueOf(numeric.group()))) throw new IllegalArgumentException();
+            }
             return n;
         } catch (Exception e) {
             throw new ServiceUnavailableException("Ground model output rejected; no recommendation accepted. Existing alerts remain authoritative.",null);
@@ -194,6 +206,6 @@ public class AnalysisService {
     }
     private static boolean validText(String s,int max) {
         return s!=null&&!s.isBlank()&&s.length()<=max
-            && !java.util.regex.Pattern.compile("[0-9]|(?i)https?://|\\b(?:diagnosed|diagnosis is|take medication|increase your dose|decrease your dose|prescribe|medically cleared|safe to exercise)\\b").matcher(s).find();
+            && !java.util.regex.Pattern.compile("(?i)https?://|\\b(?:diagnosed|diagnosis is|take medication|increase your dose|decrease your dose|prescribe|medically cleared|safe to exercise|suggests moderate energy)\\b").matcher(s).find();
     }
 }

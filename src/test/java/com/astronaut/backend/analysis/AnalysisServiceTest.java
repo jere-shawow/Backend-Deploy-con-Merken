@@ -107,4 +107,16 @@ class AnalysisServiceTest {
         Result r=service.analyze(review);
         assertThat(r.status()).isEqualTo("GENERATED_REVIEW_REQUIRED");assertThat(r.activities()).isEmpty();
     }
+    @Test void quotedProvidedValuesAreAllowedButInventedNumbersAndMissingActivitySourceAreRejected() {
+        assertThat(service.parse(valid().replace("Pulse alone","The stored pulse is 75 bpm; that alone"),context())).isNotNull();
+        assertThatThrownBy(()->service.parse(valid().replace("Pulse alone","The stored pulse is 999 bpm; that alone"),context())).isInstanceOf(ServiceUnavailableException.class);
+        assertThatThrownBy(()->service.parse(valid().replace("\"jaxa-life\",\"project-policy\"","\"project-policy\""),context())).isInstanceOf(ServiceUnavailableException.class);
+    }
+    @Test void realNovaSyntheticFixturePassesTheActualParser() throws Exception {
+        // Captured from Nova Pro with invented values only, never personal records.
+        String response=new String(Objects.requireNonNull(getClass().getResourceAsStream("/nova-pro-synthetic-response.json")).readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+        Context fixture=new Context(List.of(reading,new Reading("sleep",7D,"h",null,"SIMULATED"),
+            new Reading("hrv",40D,"ms",null,"SIMULATED"),new Reading("body_battery",50D,"score_0_100",null,"SIMULATED")),List.of(),"UNKNOWN","UNKNOWN","UNKNOWN",List.of(),"NOT_ASSESSED");
+        assertThat(service.parse(response,fixture).observations()).hasSize(4);
+    }
 }
