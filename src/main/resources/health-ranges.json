@@ -1,142 +1,508 @@
 {
+  "version": 2,
+  "notes": [
+    "severity: ok = verde, warning = naranjo (advertencia), critical = rojo (urgente).",
+    "notify: si el parámetro genera notificaciones (solo en niveles warning / critical).",
+    "La presión arterial se evalúa con sistólica y diastólica; vale el peor de los dos.",
+    "Ánimo (mood) y nutrición (kcal) no tienen rangos."
+  ],
   "health_parameters": [
     {
-      "parameter": "pulse",
-      "name": "Pulso",
-      "unit": "bpm",
+      "parameter": "radiation",
+      "name": "Radiación espacial",
+      "field": "spaceRadiation",
+      "unit": "mSv/día",
+      "notify": true,
       "ranges": {
         "very_low": {
           "min": null,
-          "max": 40,
-          "max_inclusive": false
+          "max": 0.1,
+          "max_inclusive": false,
+          "severity": "ok",
+          "description": "< 0.1 mSv/día"
         },
         "low": {
-          "min": 40,
-          "max": 59,
+          "min": 0.1,
+          "max": 0.5,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": false,
+          "severity": "ok",
+          "description": "0.1 – 0.5 mSv/día"
+        },
+        "normal": {
+          "min": 0.5,
+          "max": 1.0,
+          "min_inclusive": true,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "0.5 – 1.0 mSv/día"
+        },
+        "high": {
+          "min": 1.0,
+          "max": 2.0,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "warning",
+          "description": "1.0 – 2.0 mSv/día"
+        },
+        "very_high": {
+          "min": 2.0,
+          "max": null,
+          "min_inclusive": false,
+          "severity": "critical",
+          "description": "> 2.0 mSv/día"
+        }
+      }
+    },
+    {
+      "parameter": "distance",
+      "name": "Distancia a la Tierra",
+      "field": "distanceFromEarth",
+      "unit": "km",
+      "notify": false,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 400,
+          "max_inclusive": false,
+          "severity": "ok",
+          "description": "< 400 km (Órbita baja terrestre / ISS)"
+        },
+        "low": {
+          "min": 400,
+          "max": 2000,
+          "min_inclusive": true,
+          "max_inclusive": false,
+          "severity": "ok",
+          "description": "400 – 2.000 km"
+        },
+        "normal": {
+          "min": 2000,
+          "max": 384400,
+          "min_inclusive": true,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "2.000 – 384.400 km (Trayectoria lunar cercana)"
+        },
+        "high": {
+          "min": 384400,
+          "max": 1000000,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "384.400 – 1.000.000 km (Espacio cislunar profundo)"
+        },
+        "very_high": {
+          "min": 1000000,
+          "max": null,
+          "min_inclusive": false,
+          "severity": "ok",
+          "description": "> 1.000.000 km (Tránsito interplanetario / Órbita marciana)"
+        }
+      },
+      "informational": true
+    },
+    {
+      "parameter": "blood_pressure_systolic",
+      "name": "Presión arterial sistólica",
+      "field": "bloodPressure",
+      "unit": "mmHg",
+      "notify": true,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 90,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 90 (Hipotensión severa)"
+        },
+        "low": {
+          "min": 90,
+          "max": 100,
+          "min_inclusive": true,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "90 – 99"
+        },
+        "normal": {
+          "min": 100,
+          "max": 120,
+          "min_inclusive": true,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "100 – 120 (Óptimo / Normal)"
+        },
+        "high": {
+          "min": 120,
+          "max": 140,
+          "min_inclusive": false,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "121 – 139 (Prehipertensión)"
+        },
+        "very_high": {
+          "min": 140,
+          "max": null,
+          "min_inclusive": true,
+          "severity": "critical",
+          "description": ">= 140 (Hipertensión)"
+        }
+      },
+      "component": "systolic",
+      "group": "blood_pressure"
+    },
+    {
+      "parameter": "blood_pressure_diastolic",
+      "name": "Presión arterial diastólica",
+      "field": "bloodPressure",
+      "unit": "mmHg",
+      "notify": true,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 60,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 60 (Hipotensión severa)"
+        },
+        "normal": {
+          "min": 60,
+          "max": 80,
+          "min_inclusive": true,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "60 – 80 (Óptimo / Normal)"
+        },
+        "high": {
+          "min": 80,
+          "max": 90,
+          "min_inclusive": false,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "81 – 89 (Prehipertensión)"
+        },
+        "very_high": {
+          "min": 90,
+          "max": null,
+          "min_inclusive": true,
+          "severity": "critical",
+          "description": ">= 90 (Hipertensión)"
+        }
+      },
+      "component": "diastolic",
+      "group": "blood_pressure"
+    },
+    {
+      "parameter": "pulse",
+      "name": "Frecuencia cardíaca",
+      "field": "heartRate",
+      "unit": "lpm",
+      "notify": true,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 50,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 50 lpm (Bradicardia o condición atlética extrema)"
+        },
+        "low": {
+          "min": 50,
+          "max": 60,
+          "min_inclusive": true,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "50 – 59 lpm"
         },
         "normal": {
           "min": 60,
           "max": 100,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "60 – 100 lpm"
         },
         "high": {
-          "min": 101,
-          "max": 120,
-          "min_inclusive": true,
-          "max_inclusive": true
+          "min": 100,
+          "max": 115,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "warning",
+          "description": "101 – 115 lpm"
         },
         "very_high": {
-          "min": 120,
+          "min": 115,
           "max": null,
-          "min_inclusive": false
+          "min_inclusive": false,
+          "severity": "critical",
+          "description": "> 115 lpm (Taquicardia en reposo)"
         }
       }
     },
     {
       "parameter": "glucose",
-      "name": "Glucosa",
+      "name": "Azúcar en sangre",
+      "field": "bloodSugar",
       "unit": "mg/dL",
+      "notify": true,
       "ranges": {
         "very_low": {
           "min": null,
-          "max": 54,
-          "max_inclusive": false
+          "max": 70,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 70 mg/dL (Hipoglucemia)"
         },
         "low": {
-          "min": 54,
-          "max": 69,
+          "min": 70,
+          "max": 100,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "70 – 99 mg/dL"
         },
         "normal": {
-          "min": 70,
-          "max": 99,
+          "min": 100,
+          "max": 125,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "100 – 125 mg/dL"
         },
         "high": {
-          "min": 100,
-          "max": 199,
-          "min_inclusive": true,
-          "max_inclusive": true
+          "min": 125,
+          "max": 200,
+          "min_inclusive": false,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "126 – 199 mg/dL"
         },
         "very_high": {
           "min": 200,
           "max": null,
-          "min_inclusive": true
+          "min_inclusive": true,
+          "severity": "critical",
+          "description": ">= 200 mg/dL (Hiperglucemia crítica)"
         }
       }
     },
     {
       "parameter": "temperature",
       "name": "Temperatura corporal",
-      "unit": "C",
+      "field": "bodyTemperature",
+      "unit": "°C",
+      "notify": true,
       "ranges": {
         "very_low": {
           "min": null,
-          "max": 35,
-          "max_inclusive": false
+          "max": 35.0,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 35.0 °C (Hipotermia)"
         },
         "low": {
-          "min": 35,
-          "max": 35.9,
+          "min": 35.0,
+          "max": 36.1,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "35.0 – 36.0 °C"
         },
         "normal": {
-          "min": 36,
-          "max": 37.4,
+          "min": 36.1,
+          "max": 37.2,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "36.1 – 37.2 °C (Temperatura basal estándar)"
         },
         "high": {
-          "min": 37.5,
-          "max": 39.9,
-          "min_inclusive": true,
-          "max_inclusive": true
+          "min": 37.2,
+          "max": 38.5,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "warning",
+          "description": "37.3 – 38.5 °C (Febrícula / Fiebre leve)"
         },
         "very_high": {
-          "min": 40,
+          "min": 38.5,
           "max": null,
-          "min_inclusive": true
+          "min_inclusive": false,
+          "severity": "critical",
+          "description": "> 38.5 °C (Fiebre alta / Hipertermia)"
         }
       }
     },
     {
       "parameter": "sleep",
       "name": "Horas de sueño",
-      "unit": "hours",
+      "field": "sleepHours",
+      "unit": "h",
+      "notify": true,
       "ranges": {
         "very_low": {
           "min": null,
           "max": 4,
-          "max_inclusive": false
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 4 horas"
         },
         "low": {
           "min": 4,
           "max": 7,
           "min_inclusive": true,
-          "max_inclusive": false
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "4 – 6 horas"
         },
         "normal": {
           "min": 7,
           "max": 9,
           "min_inclusive": true,
-          "max_inclusive": true
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "7 – 9 horas (Recomendado)"
         },
         "high": {
           "min": 9,
-          "max": 10,
+          "max": 11,
           "min_inclusive": false,
-          "max_inclusive": true
+          "max_inclusive": true,
+          "severity": "warning",
+          "description": "9.5 – 11 horas"
         },
         "very_high": {
-          "min": 10,
+          "min": 11,
           "max": null,
-          "min_inclusive": false
+          "min_inclusive": false,
+          "severity": "critical",
+          "description": "> 11 horas (Hipersomnia o recuperación profunda)"
+        }
+      }
+    },
+    {
+      "parameter": "oxygen",
+      "name": "Oxígeno en sangre",
+      "field": "oxygenInBlood",
+      "unit": "% SpO2",
+      "notify": true,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 90,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 90% (Hipoxia severa)"
+        },
+        "low": {
+          "min": 90,
+          "max": 95,
+          "min_inclusive": true,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "90% – 94%"
+        },
+        "normal": {
+          "min": 95,
+          "max": 100,
+          "min_inclusive": true,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "95% – 100% (Saturación saludable)"
+        }
+      }
+    },
+    {
+      "parameter": "body_battery",
+      "name": "Body Battery",
+      "field": "bodyBattery",
+      "unit": "/ 100",
+      "notify": true,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 25,
+          "max_inclusive": true,
+          "severity": "critical",
+          "description": "0 – 25 (Agotamiento severo, reservas críticas)"
+        },
+        "low": {
+          "min": 25,
+          "max": 50,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "warning",
+          "description": "26 – 50 (Baja energía, fatiga acumulada)"
+        },
+        "normal": {
+          "min": 50,
+          "max": 75,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "51 – 75 (Nivel de energía moderado a bueno)"
+        },
+        "high": {
+          "min": 75,
+          "max": 90,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "76 – 90 (Alta energía disponible)"
+        },
+        "very_high": {
+          "min": 90,
+          "max": null,
+          "min_inclusive": false,
+          "severity": "ok",
+          "description": "91 – 100 (Carga completa / Máxima recuperación energética)"
+        }
+      }
+    },
+    {
+      "parameter": "hrv",
+      "name": "VFC (HRV)",
+      "field": "hrv",
+      "unit": "ms",
+      "notify": true,
+      "ranges": {
+        "very_low": {
+          "min": null,
+          "max": 20,
+          "max_inclusive": false,
+          "severity": "critical",
+          "description": "< 20 ms (Estrés fisiológico elevado, sobreentrenamiento o enfermedad)"
+        },
+        "low": {
+          "min": 20,
+          "max": 38,
+          "min_inclusive": true,
+          "max_inclusive": false,
+          "severity": "warning",
+          "description": "20 – 37 ms (Por debajo de la media personal o basal baja)"
+        },
+        "normal": {
+          "min": 38,
+          "max": 75,
+          "min_inclusive": true,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "38 – 75 ms (Rango equilibrado / Línea de base típica)"
+        },
+        "high": {
+          "min": 75,
+          "max": 110,
+          "min_inclusive": false,
+          "max_inclusive": true,
+          "severity": "ok",
+          "description": "76 – 110 ms (Excelente recuperación y estado físico)"
+        },
+        "very_high": {
+          "min": 110,
+          "max": null,
+          "min_inclusive": false,
+          "severity": "ok",
+          "description": "> 110 ms (Adaptabilidad autonómica sobresaliente / Reposo óptimo)"
         }
       }
     }

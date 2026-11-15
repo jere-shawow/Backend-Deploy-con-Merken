@@ -2,6 +2,7 @@ package com.astronaut.backend.notifications.service;
 
 import com.astronaut.backend.notifications.health.HealthRangeClassifier;
 import com.astronaut.backend.notifications.health.HealthStatus;
+import com.astronaut.backend.notifications.health.RangeSeverity;
 import com.astronaut.backend.notifications.model.AlertLevel;
 import com.astronaut.backend.notifications.model.HealthParameter;
 import org.springframework.beans.factory.annotation.Value;
@@ -140,7 +141,83 @@ public class GuideCatalog {
                     2. Programar un período de descanso o siesta de 20–30 minutos.
                     3. Revisar ruido, luz y temperatura del área de descanso.
                     4. Evitar cafeína y pantallas antes del próximo período de sueño.
-                    5. Si se repite, informar al médico de vuelo para ajustar el plan de trabajo."""));
+                    5. Si se repite, informar al médico de vuelo para ajustar el plan de trabajo."""),
+            Map.entry(key(HealthParameter.BLOOD_PRESSURE, AlertLevel.VERY_HIGH), """
+                    Guía – Presión arterial muy alta (hipertensión)
+                    1. Suspender esfuerzo físico y mantener al astronauta sentado y en calma.
+                    2. Repetir la medición en 5 minutos con el brazo a la altura del corazón.
+                    3. Vigilar dolor de cabeza intenso, visión borrosa, dolor de pecho o confusión.
+                    4. Informar de inmediato al médico de vuelo con ambas mediciones.
+                    5. Si aparecen síntomas, activar el protocolo de emergencia médica."""),
+            Map.entry(key(HealthParameter.BLOOD_PRESSURE, AlertLevel.HIGH), """
+                    Guía – Presión arterial alta (prehipertensión)
+                    1. Reducir la actividad y descansar 10 minutos.
+                    2. Hidratarse y evitar cafeína y sal en las próximas horas.
+                    3. Repetir la medición en 30 minutos.
+                    4. Si se mantiene alta durante el día, informar al médico de vuelo."""),
+            Map.entry(key(HealthParameter.BLOOD_PRESSURE, AlertLevel.LOW), """
+                    Guía – Presión arterial baja
+                    1. Sentar o recostar al astronauta y elevar las piernas.
+                    2. Hidratarse con líquidos (idealmente con electrolitos).
+                    3. Levantarse lentamente para evitar mareos.
+                    4. Repetir la medición en 30 minutos."""),
+            Map.entry(key(HealthParameter.BLOOD_PRESSURE, AlertLevel.VERY_LOW), """
+                    Guía – Presión arterial muy baja (hipotensión severa)
+                    1. Recostar al astronauta con las piernas elevadas y no dejarlo solo.
+                    2. Vigilar mareo, desmayo, piel fría o confusión.
+                    3. Administrar líquidos si está consciente y puede tragar.
+                    4. Informar de inmediato al médico de vuelo.
+                    5. Si pierde la conciencia, activar el protocolo de emergencia médica."""),
+            Map.entry(key(HealthParameter.OXYGEN, AlertLevel.LOW), """
+                    Guía – Oxígeno en sangre bajo
+                    1. Verificar el sensor (posición, dedo tibio, sin movimiento) y repetir la medición.
+                    2. Revisar la atmósfera del módulo o el suministro del traje.
+                    3. Respirar profundo y reducir el esfuerzo físico.
+                    4. Volver a medir en 10 minutos.
+                    5. Si sigue bajando, aplicar la guía de oxígeno muy bajo."""),
+            Map.entry(key(HealthParameter.OXYGEN, AlertLevel.VERY_LOW), """
+                    Guía – Oxígeno en sangre muy bajo (hipoxia)
+                    1. Administrar oxígeno suplementario de inmediato.
+                    2. Revisar presión y composición de la atmósfera del módulo o del traje.
+                    3. Suspender toda actividad y vigilar confusión, labios azulados o falta de aire.
+                    4. Informar de inmediato al médico de vuelo.
+                    5. Si no mejora, activar el protocolo de emergencia médica."""),
+            Map.entry(key(HealthParameter.BODY_BATTERY, AlertLevel.LOW), """
+                    Guía – Body Battery bajo
+                    1. Reducir la carga de trabajo en lo que queda del turno.
+                    2. Programar un descanso corto (20–30 minutos).
+                    3. Hidratarse y comer una colación equilibrada.
+                    4. Priorizar un período de sueño completo en el próximo ciclo."""),
+            Map.entry(key(HealthParameter.BODY_BATTERY, AlertLevel.VERY_LOW), """
+                    Guía – Body Battery muy bajo (agotamiento)
+                    1. Suspender tareas críticas o de riesgo (EVA, maniobras) hasta recuperarse.
+                    2. Indicar descanso inmediato.
+                    3. Revisar sueño, estrés y alimentación de las últimas 24 horas.
+                    4. Informar al médico de vuelo para ajustar el plan de trabajo."""),
+            Map.entry(key(HealthParameter.HRV, AlertLevel.LOW), """
+                    Guía – VFC (HRV) baja
+                    1. Reducir la intensidad del ejercicio en el día.
+                    2. Priorizar descanso y técnicas de relajación (respiración lenta).
+                    3. Revisar calidad del sueño y nivel de estrés.
+                    4. Si se mantiene baja varios días, informar al médico de vuelo."""),
+            Map.entry(key(HealthParameter.HRV, AlertLevel.VERY_LOW), """
+                    Guía – VFC (HRV) muy baja
+                    1. Suspender entrenamiento intenso y tareas físicas exigentes.
+                    2. Indicar descanso y vigilar síntomas de enfermedad (fiebre, malestar).
+                    3. Revisar sueño, hidratación y estrés de las últimas 24 horas.
+                    4. Informar al médico de vuelo."""),
+            Map.entry(key(HealthParameter.RADIATION, AlertLevel.HIGH), """
+                    Guía – Radiación espacial alta
+                    1. Verificar la lectura del dosímetro y el pronóstico de clima espacial.
+                    2. Reducir el tiempo en zonas menos protegidas del módulo.
+                    3. Postergar actividades extravehiculares (EVA) no esenciales.
+                    4. Registrar la dosis acumulada e informar al control de misión."""),
+            Map.entry(key(HealthParameter.RADIATION, AlertLevel.VERY_HIGH), """
+                    Guía – Radiación espacial muy alta
+                    1. Trasladarse de inmediato al refugio o zona más blindada del módulo.
+                    2. Suspender toda actividad extravehicular (EVA).
+                    3. Informar al control de misión y al médico de vuelo.
+                    4. Registrar la dosis y permanecer protegido hasta nueva indicación."""));
 
     private final HealthRangeClassifier ranges;
     private final ZoneId zone;
@@ -169,22 +246,37 @@ public class GuideCatalog {
      */
     public String body(HealthParameter parameter, AlertLevel level, AlertLevel previous, double value,
                        String astronautName, Duration repeatEvery, Instant generatedAt) {
+        return body(parameter, parameter.key(), null, level, previous, value,
+                astronautName, repeatEvery, generatedAt);
+    }
+
+    /**
+     * @param rangeKey clave del rango evaluado (presión: blood_pressure_systolic / _diastolic)
+     * @param display  valor a mostrar (presión: "150/95"); null = el número formateado
+     * @param value    valor numérico del componente que decidió el nivel
+     */
+    public String body(HealthParameter parameter, String rangeKey, String display, AlertLevel level,
+                       AlertLevel previous, double value, String astronautName,
+                       Duration repeatEvery, Instant generatedAt) {
         String unit = parameter.unit();
+        String component = component(rangeKey);
         StringBuilder sb = new StringBuilder();
         sb.append('[').append(DATE_HOUR.format(generatedAt.atZone(zone))).append("] ")
           .append(level.isCritical() ? "URGENTE – " : "ADVERTENCIA – ")
           .append(parameter.label()).append(' ').append(adjective(parameter, level)).append(": ")
-          .append(nameOr(astronautName)).append(" registra ").append(number(value)).append(' ').append(unit);
+          .append(nameOr(astronautName)).append(" registra ").append(display != null ? display : number(value))
+          .append(' ').append(unit);
 
         Optional<Double> limit = level.isBelowNormal()
-                ? ranges.bound(parameter.key(), HealthStatus.NORMAL, true)
-                : ranges.bound(parameter.key(), HealthStatus.NORMAL, false);
+                ? ranges.bound(rangeKey, HealthStatus.NORMAL, true)
+                : ranges.bound(rangeKey, HealthStatus.NORMAL, false);
         if (limit.isPresent()) {
             double diff = Math.abs(value - limit.get());
-            sb.append(", ").append(number(diff)).append(' ').append(unit)
+            sb.append(", ").append(component).append(number(diff)).append(' ').append(unit)
               .append(level.isBelowNormal() ? " bajo el mínimo normal" : " sobre el máximo normal");
         }
-        sb.append(" (rango normal ").append(ranges.normalRange(parameter.key())).append(' ').append(unit).append("). ");
+        sb.append(" (rango normal ").append(component).append(ranges.normalRange(rangeKey))
+          .append(' ').append(unit).append("). ");
 
         sb.append(trend(parameter, level, previous));
 
@@ -193,9 +285,7 @@ public class GuideCatalog {
                     + "si no mejora, contacte al médico de vuelo. ");
         } else {
             sb.append("Aún no es crítico, pero conviene vigilarlo y seguir la guía adjunta. ");
-            criticalThreshold(parameter, level).ifPresent(t -> sb.append("Si llega a ")
-                    .append(number(t)).append(' ').append(unit)
-                    .append(" o ").append(level.isBelowNormal() ? "menos" : "más")
+            thresholdText(rangeKey, level, unit).ifPresent(t -> sb.append("Si ").append(component).append(t)
                     .append(" se enviará una alerta urgente. "));
         }
 
@@ -206,14 +296,20 @@ public class GuideCatalog {
     }
 
     public String annex(HealthParameter parameter, AlertLevel level) {
-        return GUIDES.get(key(parameter, level));
+        String guide = GUIDES.get(key(parameter, level));
+        if (guide != null) {
+            return guide;
+        }
+        return "Guía – " + parameter.label() + " " + adjective(parameter, level) + "\n"
+                + "1. Confirmar la medición.\n"
+                + "2. Informar al médico de vuelo y seguir sus indicaciones.";
     }
 
     /** "muy alto", "alta", "muy bajas"... según el género / número del parámetro. */
     static String adjective(HealthParameter parameter, AlertLevel level) {
         String base = level.label();
         return switch (parameter) {
-            case GLUCOSE, TEMPERATURE -> base.substring(0, base.length() - 1) + "a";
+            case GLUCOSE, TEMPERATURE, BLOOD_PRESSURE, HRV, RADIATION -> base.substring(0, base.length() - 1) + "a";
             case SLEEP -> base.substring(0, base.length() - 1) + "as";
             default -> base;
         };
@@ -238,11 +334,38 @@ public class GuideCatalog {
         return "Cambió desde " + adjective(parameter, previous) + " en el aviso anterior. ";
     }
 
-    /** Valor desde el cual una advertencia pasa a urgente (ej. pulso 120, azúcar 54). */
-    private Optional<Double> criticalThreshold(HealthParameter parameter, AlertLevel level) {
-        return level.isBelowNormal()
-                ? ranges.bound(parameter.key(), HealthStatus.VERY_LOW, false)
-                : ranges.bound(parameter.key(), HealthStatus.VERY_HIGH, true);
+    /**
+     * Desde qué valor una advertencia pasa a urgente, según health-ranges.json:
+     * "supera 115 bpm", "llega a 200 mg/dL o más", "baja de 70 mg/dL", "llega a 25 / 100 o menos".
+     * Vacío si ese nivel no es urgente para el parámetro (p. ej. Body Battery alto).
+     */
+    private Optional<String> thresholdText(String rangeKey, AlertLevel level, String unit) {
+        HealthStatus critical = level.isBelowNormal() ? HealthStatus.VERY_LOW : HealthStatus.VERY_HIGH;
+        if (ranges.severity(rangeKey, critical) != RangeSeverity.CRITICAL) {
+            return Optional.empty();
+        }
+        boolean below = level.isBelowNormal();
+        Optional<Double> limit = ranges.bound(rangeKey, critical, !below);
+        if (limit.isEmpty()) {
+            return Optional.empty();
+        }
+        boolean inclusive = ranges.inclusive(rangeKey, critical, !below);
+        String v = number(limit.get()) + " " + unit;
+        if (below) {
+            return Optional.of(inclusive ? "llega a " + v + " o menos" : "baja de " + v);
+        }
+        return Optional.of(inclusive ? "llega a " + v + " o más" : "supera " + v);
+    }
+
+    /** "sistólica " / "diastólica " para la presión arterial; vacío para el resto. */
+    private static String component(String rangeKey) {
+        if (HealthParameter.SYSTOLIC_KEY.equals(rangeKey)) {
+            return "sistólica ";
+        }
+        if (HealthParameter.DIASTOLIC_KEY.equals(rangeKey)) {
+            return "diastólica ";
+        }
+        return "";
     }
 
     private static String key(HealthParameter p, AlertLevel l) {

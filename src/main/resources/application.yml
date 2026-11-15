@@ -9,9 +9,19 @@ analysis:
     model-id: ${BEDROCK_MODEL_ID:us.amazon.nova-pro-v1:0}
     api-token: ${BEDROCK_ANALYSIS_API_TOKEN:}
 
+# Frontends web en otro dominio (front en la nube). Lista separada por comas.
+# Por defecto cualquier origen; en producción conviene poner solo la URL del front.
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
 spring:
   application:
     name: astronaut-backend
+  # "mood": "bueno" o "Bueno" se aceptan igual que "BUENO"
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
   # Credenciales fuera del código: se leen de variables de entorno o del archivo
   # backend/.env (no se sube a git). Ver backend/.env.example
   config:
@@ -73,17 +83,28 @@ notifications:
   # Vigencia de cada notificación
   timeout-hours: ${NOTIFICATIONS_TIMEOUT_HOURS:24}
   # URGENTE (muy bajo / muy alto): repetición mientras siga en ese nivel
+  # (todos los parámetros de salud de health-ranges.json excepto ánimo y nutrición)
   repeat-minutes:
     pulse: 15
     glucose: 30
     temperature: 30
     sleep: 1440   # 1 vez al día
+    blood_pressure: 30
+    oxygen: 15
+    body_battery: 60
+    hrv: 1440     # se mide 1 vez por noche
+    radiation: 60
   # ADVERTENCIA (bajo / alto): repetición mientras siga en ese nivel
   warning-repeat-minutes:
     pulse: 30
     glucose: 60
     temperature: 60
     sleep: 1440
+    blood_pressure: 60
+    oxygen: 30
+    body_battery: 120
+    hrv: 1440
+    radiation: 120
   monitor:
     enabled: ${NOTIFICATIONS_MONITOR_ENABLED:true}
 

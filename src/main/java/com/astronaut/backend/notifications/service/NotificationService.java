@@ -3,6 +3,7 @@ package com.astronaut.backend.notifications.service;
 import com.astronaut.backend.notifications.config.NotificationProperties;
 import com.astronaut.backend.notifications.dto.NotificationRequest;
 import com.astronaut.backend.exception.ResourceNotFoundException;
+import com.astronaut.backend.notifications.health.HealthEvaluator;
 import com.astronaut.backend.notifications.model.AlertLevel;
 import com.astronaut.backend.notifications.model.HealthParameter;
 import com.astronaut.backend.notifications.model.Notification;
@@ -81,6 +82,20 @@ public class NotificationService {
     /** previous: nivel del aviso anterior (null si es el primero) para explicar si empeoró o mejoró. */
     public Notification createAlert(Long astronautId, String astronautName, HealthParameter parameter,
                                     AlertLevel level, AlertLevel previous, double value) {
+        return create(astronautId, astronautName, parameter, parameter.key(), null,
+                level, previous, value);
+    }
+
+    /** Desde el monitor: usa la evaluación completa (la presión muestra "150/95"). */
+    public Notification createAlert(Long astronautId, String astronautName, HealthEvaluator.Evaluation evaluation,
+                                    AlertLevel level, AlertLevel previous) {
+        return create(astronautId, astronautName, evaluation.parameter(), evaluation.rangeKey(),
+                evaluation.parameter() == HealthParameter.BLOOD_PRESSURE ? evaluation.displayValue() : null,
+                level, previous, evaluation.value());
+    }
+
+    private Notification create(Long astronautId, String astronautName, HealthParameter parameter, String rangeKey,
+                                String display, AlertLevel level, AlertLevel previous, double value) {
         Instant now = clock.instant();
         Notification n = new Notification();
         n.setAstronautId(astronautId);
@@ -90,7 +105,7 @@ public class NotificationService {
         n.setSeverity(level.severity());
         n.setMeasuredValue(value);
         n.setTitle(guides.title(parameter, level, astronautName));
-        n.setBody(guides.body(parameter, level, previous, value, astronautName,
+        n.setBody(guides.body(parameter, rangeKey, display, level, previous, value, astronautName,
                 properties.repeatInterval(parameter, level), now));
         n.setAnnex(guides.annex(parameter, level));
         n.setCreatedAt(now);

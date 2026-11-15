@@ -39,7 +39,8 @@ public class AstronautService {
 
     public Astronaut create(Astronaut astronaut) {
         astronaut.setId(null);
-        // el vínculo Garmin se crea aparte: PUT /api/astronauts/{id}/garmin
+        // el vínculo Garmin se crea con PUT /api/astronauts/{id}/garmin
+        // o enviando "garminApiKey" en este mismo JSON (ver AstronautController)
         astronaut.setGarminLinked(false);
         astronaut.setGarminLastSync(null);
         return repository.save(astronaut);

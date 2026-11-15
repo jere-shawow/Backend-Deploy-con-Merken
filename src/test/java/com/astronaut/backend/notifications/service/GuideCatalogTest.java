@@ -44,12 +44,12 @@ class GuideCatalogTest {
     @Test
     @DisplayName("advertencia: explica que no es crítico y desde qué valor pasa a urgente")
     void warningBody() {
-        String body = catalog.body(HealthParameter.GLUCOSE, AlertLevel.LOW, 60, "Mateo",
+        String body = catalog.body(HealthParameter.GLUCOSE, AlertLevel.LOW, 85, "Mateo",
                 Duration.ofMinutes(60), Instant.parse("2026-11-14T15:00:00Z"));
 
         assertThat(body).startsWith("[14-11-2026 12:00] ADVERTENCIA – Azúcar en sangre baja");
-        assertThat(body).contains("60 mg/dL", "10 mg/dL bajo el mínimo normal", "Aún no es crítico",
-                "54 mg/dL o menos", "1 hora");
+        assertThat(body).contains("85 mg/dL", "15 mg/dL bajo el mínimo normal", "Aún no es crítico",
+                "baja de 70 mg/dL", "1 hora");
         assertThat(catalog.title(HealthParameter.TEMPERATURE, AlertLevel.HIGH, "Ana"))
                 .isEqualTo("ADVERTENCIA: Temperatura corporal alta – Ana");
     }

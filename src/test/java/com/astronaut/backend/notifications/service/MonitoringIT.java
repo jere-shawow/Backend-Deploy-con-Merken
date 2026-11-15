@@ -1,5 +1,6 @@
 package com.astronaut.backend.notifications.service;
 
+import com.astronaut.backend.notifications.client.AstronautSnapshot;
 import com.astronaut.backend.notifications.model.AlertLevel;
 import com.astronaut.backend.notifications.model.HealthParameter;
 import com.astronaut.backend.notifications.model.Notification;
@@ -28,9 +29,46 @@ class MonitoringIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("parámetros nuevos: presión, oxígeno, Body Battery, HRV y radiación generan alertas")
+    void newParametersNotify() {
+        // presión 150/95 (muy alta), O2 92 (bajo), Body Battery 20 (muy bajo), HRV 30 (baja), radiación 1.5 (alta)
+        ASTRONAUTS.putFull(new AstronautSnapshot(3L, "Diego", 72, 110.0, 36.6, 8.0,
+                1.5, "150/95", 92.0, 20, 30.0));
+
+        assertThat(monitoring.runCycle()).isEqualTo(5);
+
+        Notification bp = notificationsFor(HealthParameter.BLOOD_PRESSURE).get(0);
+        assertThat(bp.getSeverity()).isEqualTo(Severity.CRITICAL);
+        assertThat(bp.getTitle()).isEqualTo("URGENTE: Presión arterial muy alta – Diego");
+        assertThat(bp.getBody()).contains("registra 150/95 mmHg", "sistólica 30 mmHg sobre el máximo normal",
+                "rango normal sistólica 100 – 120 mmHg");
+        assertThat(bp.getAnnex()).startsWith("Guía – Presión arterial muy alta");
+
+        Notification o2 = notificationsFor(HealthParameter.OXYGEN).get(0);
+        assertThat(o2.getSeverity()).isEqualTo(Severity.WARNING);
+        assertThat(o2.getTitle()).isEqualTo("ADVERTENCIA: Oxígeno en sangre bajo – Diego");
+        assertThat(o2.getBody()).contains("baja de 90 %");
+
+        assertThat(notificationsFor(HealthParameter.BODY_BATTERY).get(0).getSeverity()).isEqualTo(Severity.CRITICAL);
+        assertThat(notificationsFor(HealthParameter.HRV).get(0).getTitle())
+                .isEqualTo("ADVERTENCIA: VFC (HRV) baja – Diego");
+        assertThat(notificationsFor(HealthParameter.RADIATION).get(0).getTitle())
+                .isEqualTo("ADVERTENCIA: Radiación espacial alta – Diego");
+    }
+
+    @Test
+    @DisplayName("Body Battery y HRV altos (buena recuperación) no generan alertas")
+    void goodHighValuesDoNotNotify() {
+        ASTRONAUTS.putFull(new AstronautSnapshot(4L, "Ana", 72, 110.0, 36.6, 8.0,
+                0.8, "110/75", 98.0, 95, 120.0));
+
+        assertThat(monitoring.runCycle()).isZero();
+    }
+
+    @Test
     @DisplayName("pulso muy alto: se notifica apenas se detecta, con cuerpo, anexo y timeout de 24 h")
     void notifiesImmediatelyWithBodyAnnexAndTimeout() {
-        ASTRONAUTS.put(7, "Valentina", 131, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(7, "Valentina", 131, 110.0, 36.6, 8.0);
 
         assertThat(monitoring.runCycle()).isEqualTo(1);
 
@@ -52,7 +90,7 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("pulso: se repite cada 15 minutos mientras siga muy alto")
     void pulseRepeatsEvery15Minutes() {
-        ASTRONAUTS.put(1, "A", 131, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 131, 110.0, 36.6, 8.0);
         monitoring.runCycle();
 
         clock.advance(Duration.ofMinutes(5));
@@ -83,7 +121,7 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("sueño: una vez al día")
     void sleepOncePerDay() {
-        ASTRONAUTS.put(1, "A", 72, 90.0, 36.6, 3.0);
+        ASTRONAUTS.put(1, "A", 72, 110.0, 36.6, 3.0);
         assertThat(monitoring.runCycle()).isEqualTo(1);
 
         clock.advance(Duration.ofHours(23));
@@ -95,7 +133,7 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("si vuelve a lo normal y luego empeora otra vez, avisa de inmediato")
     void resetsWhenBackToNormal() {
-        ASTRONAUTS.put(1, "A", 131, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 131, 110.0, 36.6, 8.0);
         monitoring.runCycle();
 
         clock.advance(Duration.ofMinutes(2));
@@ -104,17 +142,17 @@ class MonitoringIT extends AbstractIntegrationTest {
         assertThat(alertStateRepository.count()).isZero();
 
         clock.advance(Duration.ofMinutes(2));
-        ASTRONAUTS.put(1, "A", 135, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 135, 110.0, 36.6, 8.0);
         assertThat(monitoring.runCycle()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("de muy bajo a muy alto: nueva notificación sin esperar")
     void levelChange() {
-        ASTRONAUTS.put(1, "A", 35, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 35, 110.0, 36.6, 8.0);
         monitoring.runCycle();
         clock.advance(Duration.ofMinutes(1));
-        ASTRONAUTS.put(1, "A", 140, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 140, 110.0, 36.6, 8.0);
 
         assertThat(monitoring.runCycle()).isEqualTo(1);
         assertThat(notificationsFor(HealthParameter.PULSE))
@@ -139,18 +177,18 @@ class MonitoringIT extends AbstractIntegrationTest {
         Notification pulse = notificationsFor(HealthParameter.PULSE).get(0);
         assertThat(pulse.getLevel()).isEqualTo(AlertLevel.HIGH);
         assertThat(pulse.getTitle()).isEqualTo("ADVERTENCIA: Pulso alto – Ana");
-        assertThat(pulse.getBody()).contains("110 bpm", "10 bpm sobre el máximo normal", "120 bpm o más",
+        assertThat(pulse.getBody()).contains("110 bpm", "10 bpm sobre el máximo normal", "supera 115 bpm",
                 "cada 30 minutos");
         Notification sleep = notificationsFor(HealthParameter.SLEEP).get(0);
         assertThat(sleep.getLevel()).isEqualTo(AlertLevel.LOW);
         assertThat(sleep.getTitle()).isEqualTo("ADVERTENCIA: Horas de sueño bajas – Ana");
-        assertThat(sleep.getBody()).contains("1 h bajo el mínimo normal", "4 h o menos");
+        assertThat(sleep.getBody()).contains("1 h bajo el mínimo normal", "baja de 4 h");
     }
 
     @Test
     @DisplayName("advertencia: se repite con el intervalo de advertencia (pulso cada 30 min)")
     void warningRepeatsLessOften() {
-        ASTRONAUTS.put(1, "A", 110, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 110, 110.0, 36.6, 8.0);
         assertThat(monitoring.runCycle()).isEqualTo(1);
 
         clock.advance(Duration.ofMinutes(15));
@@ -162,11 +200,11 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("de alto a muy alto: alerta URGENTE de inmediato, indicando que empeoró")
     void escalationFromWarningToCritical() {
-        ASTRONAUTS.put(1, "A", 110, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 110, 110.0, 36.6, 8.0);
         monitoring.runCycle();
 
         clock.advance(Duration.ofMinutes(2));
-        ASTRONAUTS.put(1, "A", 135, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 135, 110.0, 36.6, 8.0);
         assertThat(monitoring.runCycle()).isEqualTo(1);
 
         List<Notification> pulse = notificationsFor(HealthParameter.PULSE);
@@ -179,11 +217,11 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("de muy alto a alto: nueva advertencia indicando que mejoró")
     void deEscalation() {
-        ASTRONAUTS.put(1, "A", 135, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 135, 110.0, 36.6, 8.0);
         monitoring.runCycle();
 
         clock.advance(Duration.ofMinutes(2));
-        ASTRONAUTS.put(1, "A", 110, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 110, 110.0, 36.6, 8.0);
         assertThat(monitoring.runCycle()).isEqualTo(1);
 
         Notification last = notificationsFor(HealthParameter.PULSE).stream()
@@ -194,8 +232,8 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("cada usuario tiene sus propias alertas")
     void perUser() {
-        ASTRONAUTS.put(1, "A", 131, 90.0, 36.6, 8.0);
-        ASTRONAUTS.put(2, "B", 131, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 131, 110.0, 36.6, 8.0);
+        ASTRONAUTS.put(2, "B", 131, 110.0, 36.6, 8.0);
 
         assertThat(monitoring.runCycle()).isEqualTo(2);
         assertThat(notificationRepository.findAll()).extracting(Notification::getAstronautId)
@@ -205,7 +243,7 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("si no se pueden leer los astronautas, no falla ni crea nada")
     void backendDown() {
-        ASTRONAUTS.put(1, "A", 131, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 131, 110.0, 36.6, 8.0);
         ASTRONAUTS.down(true);
 
         assertThat(monitoring.runCycle()).isZero();
@@ -214,7 +252,7 @@ class MonitoringIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("si el astronauta se elimina, su estado de alerta se limpia")
     void deletedAstronautStateIsRemoved() {
-        ASTRONAUTS.put(1, "A", 131, 90.0, 36.6, 8.0);
+        ASTRONAUTS.put(1, "A", 131, 110.0, 36.6, 8.0);
         monitoring.runCycle();
         ASTRONAUTS.remove(1);
 

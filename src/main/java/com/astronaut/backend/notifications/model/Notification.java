@@ -39,8 +39,10 @@ public class Notification {
     private String astronautName;
 
     /** null en notificaciones manuales. */
+    /** Texto (no ENUM nativo) para poder agregar parámetros nuevos. */
     @Enumerated(EnumType.STRING)
-    @Column(name = "health_parameter", length = 20)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "health_parameter", length = 30)
     private HealthParameter parameter;
 
     /** VERY_LOW, LOW, HIGH o VERY_HIGH (texto, no ENUM nativo, para poder agregar niveles). */

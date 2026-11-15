@@ -3,6 +3,8 @@ package com.astronaut.backend.notifications.service;
 import com.astronaut.backend.notifications.client.AstronautSource;
 import com.astronaut.backend.notifications.client.AstronautSnapshot;
 import com.astronaut.backend.notifications.config.NotificationProperties;
+import com.astronaut.backend.notifications.health.HealthEvaluator;
+import com.astronaut.backend.notifications.health.HealthEvaluator.Evaluation;
 import com.astronaut.backend.notifications.health.HealthRangeClassifier;
 import com.astronaut.backend.notifications.health.HealthStatus;
 import com.astronaut.backend.notifications.model.AlertLevel;
@@ -35,16 +37,18 @@ public class MonitoringService {
 
     private final AstronautSource astronautSource;
     private final HealthRangeClassifier classifier;
+    private final HealthEvaluator evaluator;
     private final AlertStateRepository stateRepository;
     private final NotificationService notificationService;
     private final NotificationProperties properties;
     private final Clock clock;
 
     public MonitoringService(AstronautSource astronautSource, HealthRangeClassifier classifier,
-                             AlertStateRepository stateRepository, NotificationService notificationService,
+                             HealthEvaluator evaluator, AlertStateRepository stateRepository, NotificationService notificationService,
                              NotificationProperties properties, Clock clock) {
         this.astronautSource = astronautSource;
         this.classifier = classifier;
+        this.evaluator = evaluator;
         this.stateRepository = stateRepository;
         this.notificationService = notificationService;
         this.properties = properties;
@@ -73,16 +77,18 @@ public class MonitoringService {
     }
 
     private boolean evaluate(AstronautSnapshot astronaut, HealthParameter parameter, Instant now) {
-        Double value = parameter.valueOf(astronaut);
-        Optional<AlertLevel> level = value == null ? Optional.empty() : alertLevel(parameter, value);
+        Optional<Evaluation> evaluation = notifies(parameter)
+                ? evaluator.evaluate(parameter, astronaut).filter(Evaluation::needsAlert)
+                : Optional.empty();
+        Optional<AlertLevel> level = evaluation.flatMap(e -> alertLevel(e.status()));
         Optional<AlertState> state = stateRepository.findByAstronautIdAndParameter(astronaut.id(), parameter);
         Duration repeat = level.map(l -> properties.repeatInterval(parameter, l))
                 .orElseGet(() -> properties.repeatInterval(parameter));
 
         switch (AlertPolicy.decide(state, level, now, repeat)) {
             case NOTIFY -> {
-                notificationService.createAlert(astronaut.id(), astronaut.astronautName(), parameter,
-                        level.orElseThrow(), state.map(AlertState::getLevel).orElse(null), value);
+                notificationService.createAlert(astronaut.id(), astronaut.astronautName(), evaluation.orElseThrow(),
+                        level.orElseThrow(), state.map(AlertState::getLevel).orElse(null));
                 AlertState s = state.orElseGet(() -> new AlertState(astronaut.id(), parameter, level.get(), now));
                 s.setLevel(level.get());
                 s.setLastNotifiedAt(now);
@@ -95,13 +101,18 @@ public class MonitoringService {
         return false;
     }
 
-    /** bajo / alto -> advertencia; muy bajo / muy alto -> urgente; normal -> nada. */
-    private Optional<AlertLevel> alertLevel(HealthParameter parameter, double value) {
-        Optional<HealthStatus> status = classifier.classify(parameter.key(), value);
-        if (status.isEmpty()) {
-            return Optional.empty();
-        }
-        return switch (status.get()) {
+    /** "notify": false en health-ranges.json desactiva las alertas del parámetro. */
+    private boolean notifies(HealthParameter parameter) {
+        String key = parameter == HealthParameter.BLOOD_PRESSURE ? HealthParameter.SYSTOLIC_KEY : parameter.key();
+        return classifier.info(key).map(HealthRangeClassifier.ParameterInfo::notify).orElse(true);
+    }
+
+    /**
+     * Nivel del aviso. Solo llega aquí si el rango es warning / critical
+     * (p. ej. Body Battery alto es "ok" y no avisa).
+     */
+    private static Optional<AlertLevel> alertLevel(HealthStatus status) {
+        return switch (status) {
             case VERY_LOW -> Optional.of(AlertLevel.VERY_LOW);
             case LOW -> Optional.of(AlertLevel.LOW);
             case HIGH -> Optional.of(AlertLevel.HIGH);

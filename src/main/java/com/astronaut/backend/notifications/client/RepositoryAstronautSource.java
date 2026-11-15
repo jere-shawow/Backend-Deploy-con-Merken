@@ -21,7 +21,9 @@ public class RepositoryAstronautSource implements AstronautSource {
     public List<AstronautSnapshot> findAll() {
         return repository.findAll().stream()
                 .map(a -> new AstronautSnapshot(a.getId(), a.getAstronautName(), a.getHeartRate(),
-                        a.getBloodSugar(), a.getBodyTemperature(), a.getSleepHours()))
+                        a.getBloodSugar(), a.getBodyTemperature(), a.getSleepHours(),
+                        a.getSpaceRadiation(), a.getBloodPressure(), a.getOxygenInBlood(),
+                        a.getBodyBattery(), a.getHrv()))
                 .toList();
     }
 }

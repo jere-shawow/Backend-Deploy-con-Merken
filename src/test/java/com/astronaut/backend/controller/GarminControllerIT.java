@@ -227,4 +227,37 @@ class GarminControllerIT extends AbstractIntegrationTest {
 
         assertThat(garminLinkRepository.findByAstronautId(a.getId())).isEmpty();
     }
+
+    @Test
+    @DisplayName("POST /api/astronauts con garminApiKey: crea el astronauta y lo vincula en la misma petición")
+    void createWithGarminKeyInPayload() throws Exception {
+        GARMIN.heartRate(88).sleepSeconds(27_000).bodyBattery(70).hrv(52);
+        String json = TestData.astronautJson("Diego").replace("}",
+                ",\"garminApiKey\":\"" + FakeGarminServer.VALID_KEY + "\"}");
+
+        mockMvc.perform(post("/api/astronauts").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.garminLinked").value(true))
+                .andExpect(jsonPath("$.heartRate").value(88))
+                .andExpect(jsonPath("$.garminApiKey").doesNotExist())
+                .andExpect(jsonPath("$.garminLinkError").doesNotExist());
+
+        Astronaut saved = astronautRepository.findAll().get(0);
+        assertThat(saved.getGarminLinked()).isTrue();
+        assertThat(garminLinkRepository.findByAstronautId(saved.getId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("POST /api/astronauts con key inválida: el astronauta se guarda y la respuesta explica el error")
+    void createWithInvalidGarminKey() throws Exception {
+        String json = TestData.astronautJson("Diego").replace("}", ",\"apiKey\":\"GCDC_mala\"}");
+
+        mockMvc.perform(post("/api/astronauts").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.garminLinked").value(false))
+                .andExpect(jsonPath("$.garminLinkError").value(containsString("no se pudo vincular con Garmin")));
+
+        assertThat(astronautRepository.count()).isEqualTo(1);
+        assertThat(garminLinkRepository.count()).isZero();
+    }
 }

@@ -28,7 +28,13 @@ public class FakeAstronautSource implements AstronautSource {
 
     /** Valores normales en todo. */
     public void putNormal(long id, String name) {
-        put(id, name, 72, 90.0, 36.6, 8.0);
+        put(id, name, 72, 110.0, 36.6, 8.0);
+    }
+
+    /** Astronauta con todos los datos (para presión, oxígeno, Body Battery, HRV y radiación). */
+    public void putFull(AstronautSnapshot snapshot) {
+        astronauts.removeIf(a -> a.id().equals(snapshot.id()));
+        astronauts.add(snapshot);
     }
 
     public void remove(long id) { astronauts.removeIf(a -> a.id() == id); }

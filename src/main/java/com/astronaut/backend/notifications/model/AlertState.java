@@ -31,8 +31,10 @@ public class AlertState {
     @Column(name = "astronaut_id", nullable = false)
     private Long astronautId;
 
+    /** Texto (no ENUM nativo) para poder agregar parámetros nuevos. */
     @Enumerated(EnumType.STRING)
-    @Column(name = "health_parameter", nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "health_parameter", nullable = false, length = 30)
     private HealthParameter parameter;
 
     @Enumerated(EnumType.STRING)

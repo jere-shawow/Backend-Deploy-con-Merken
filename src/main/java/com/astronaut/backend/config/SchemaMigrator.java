@@ -39,6 +39,9 @@ public class SchemaMigrator {
         ensureVarchar("notifications", "alert_level", 20);
         ensureVarchar("notification_alert_states", "alert_level", 20);
         ensureColumn("notifications", "severity", "VARCHAR(20)");
+        // parámetros nuevos (presión, oxígeno, Body Battery, HRV, radiación): ENUM nativo -> VARCHAR
+        ensureVarchar("notifications", "health_parameter", 30);
+        ensureVarchar("notification_alert_states", "health_parameter", 30);
     }
 
     /** Convierte una columna ENUM nativa en VARCHAR para aceptar valores nuevos. */

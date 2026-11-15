@@ -1,5 +1,7 @@
 package com.astronaut.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
@@ -126,6 +129,22 @@ public class Astronaut {
     @Column(name = "garmin_last_sync")
     private Instant garminLastSync;
 
+    /**
+     * Opcional, solo de entrada: API key de Garmin enviada junto con el astronauta
+     * (POST / PUT /api/astronauts). No se guarda en esta tabla ni se devuelve:
+     * se usa para crear el vínculo en garmin_links.
+     */
+    @Transient
+    @JsonProperty(value = "garminApiKey", access = JsonProperty.Access.WRITE_ONLY)
+    @JsonAlias({"apiKey", "garmin_api_key"})
+    private String garminApiKey;
+
+    /** Solo de salida: por qué no se pudo vincular Garmin (el astronauta sí queda guardado). */
+    @Transient
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String garminLinkError;
+
     public Astronaut() {
     }
 
@@ -193,4 +212,10 @@ public class Astronaut {
 
     public Instant getGarminLastSync() { return garminLastSync; }
     public void setGarminLastSync(Instant garminLastSync) { this.garminLastSync = garminLastSync; }
+
+    public String getGarminApiKey() { return garminApiKey; }
+    public void setGarminApiKey(String garminApiKey) { this.garminApiKey = garminApiKey; }
+
+    public String getGarminLinkError() { return garminLinkError; }
+    public void setGarminLinkError(String garminLinkError) { this.garminLinkError = garminLinkError; }
 }
