@@ -1,6 +1,14 @@
 server:
   port: ${SERVER_PORT:8080}
 
+# Ground station only. Disabled until a server-only token is provisioned.
+analysis:
+  bedrock:
+    enabled: ${BEDROCK_ANALYSIS_ENABLED:false}
+    region: ${BEDROCK_REGION:us-east-1}
+    model-id: ${BEDROCK_MODEL_ID:us.amazon.nova-pro-v1:0}
+    api-token: ${BEDROCK_ANALYSIS_API_TOKEN:}
+
 spring:
   application:
     name: astronaut-backend
