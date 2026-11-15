@@ -17,6 +17,11 @@ public class AnalysisController {
     public org.springframework.http.ResponseEntity<Result> stored(@PathVariable long id,@Valid @RequestBody StoredRequest request) {
         return response(service.stored(id,request));
     }
+    @GetMapping("/astronauts/{id}/context")
+    public org.springframework.http.ResponseEntity<Context> snapshot(@PathVariable long id) {
+        return org.springframework.http.ResponseEntity.ok()
+            .cacheControl(org.springframework.http.CacheControl.noStore()).body(service.snapshot(id,null));
+    }
     private org.springframework.http.ResponseEntity<Result> response(Result result) {
         return org.springframework.http.ResponseEntity.ok()
             .cacheControl(org.springframework.http.CacheControl.noStore()).body(result);
