@@ -1,8 +1,9 @@
 target/
+.git/
+.github/
+deploy/
 data/
 .env
 .idea/
 *.iml
 .vscode/
-deploy/
-.github/
