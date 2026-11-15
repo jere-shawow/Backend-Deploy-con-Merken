@@ -51,7 +51,9 @@ public class AnalysisService {
         Do not assign low, moderate or high energy categories from a score or invent personal baselines.
         There is no trusted current exercise clearance or assigned mission plan. Recommend no exercise.
         activityIds may contain zero to two IDs from allowedActivities, conditional on time and availability.
-        Explain in summary why conditional leisure may be an option without claiming it treats these metrics.
+        Summary describes measurements and uncertainty only. Do not recommend or reject activities in
+        summary: activityIds and the independent core action carry those decisions separately.
+        Never say no leisure is recommended while returning leisure activity IDs.
         A core action other than NOT_ASSESSED forbids leisure; do not replace or downgrade alerts.
         Source IDs are only jaxa-life (describes ISS leisure), project-leisure and project-policy.
         These are contextual references, not clinical evidence. No URLs or invented citations.
@@ -195,6 +197,9 @@ public class AnalysisService {
                 throw new IllegalArgumentException();
             if (CARDS.stream().filter(c->n.activityIds().contains(c.id()))
                     .anyMatch(c->!n.sourceIds().contains(c.sourceId()))) throw new IllegalArgumentException();
+            if (!n.activityIds().isEmpty() && java.util.regex.Pattern.compile(
+                    "(?i)no leisure|no activities? (?:is|are) recommended|leisure (?:is|are) not recommended")
+                    .matcher(n.summary()).find()) throw new IllegalArgumentException();
             Set<Double> supplied=new HashSet<>();
             context.readings().forEach(r->{if(r.value()!=null)supplied.add(r.value());});
             context.history().forEach(h->h.readings().forEach(r->{if(r.value()!=null)supplied.add(r.value());}));
