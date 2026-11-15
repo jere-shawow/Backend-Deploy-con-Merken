@@ -41,6 +41,21 @@ public class AnalysisService {
         summary must be two to four concise connected paragraphs: interpret the combined snapshot,
         explain your main operational/recovery priority, then suggest practical mission-compatible
         activities with reasons. Give a helpful contextual response, not a generic refusal or disclaimer.
+        The response must answer WHAT TO DO, not just describe readings. After a brief combined
+        interpretation, write a separate paragraph beginning "What to do now:" with concrete next
+        steps tied to the supplied flags and mission context. For IMMEDIATE_PROTOCOL, explicitly
+        follow the existing local protocol and contact the onboard medical officer now; do not
+        replace this with merely discussing sleep. Ask the mission lead to review demanding duties
+        and protect the next scheduled sleep opportunity, rather than independently rescheduling
+        operations. For REVIEW_MEDICAL, request the required medical review and workload discussion.
+        Where timing or activity state is unknown, ask to verify sensor contact, whether the pulse
+        was recorded during activity or rest, and repeat according to the existing measurement
+        procedure; never invent a repeat interval. Do not call pulse high/abnormal without a supplied
+        heart-rate flag or verified resting context. Do not claim sleep caused the pulse reading.
+        Finish with a practical choice for the next permitted off-duty period, such as offline music
+        or reading, only after required review/protocol and if the schedule permits. Explain that it
+        is downtime, not a treatment. With restrictions, do not present leisure as the immediate action
+        or recommend starting exercise. No exercise dose, sleep target, medication or new protocol.
         observations must be an empty array: do not generate a metric-by-metric report.
         Do not say there is no data or no context when readings/history are supplied. Mention actual
         missing metadata only if it changes the suggestion, briefly, without repeating a disclaimer.

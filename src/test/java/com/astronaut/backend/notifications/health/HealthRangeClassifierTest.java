@@ -70,7 +70,10 @@ class HealthRangeClassifierTest {
     void noRangesForMoodAndNutrition() {
         assertThat(classifier.info("mood")).isEmpty();
         assertThat(classifier.info("nutrition")).isEmpty();
-        assertThat(classifier.info("distance").orElseThrow().notifies()).isFalse();
-        assertThat(classifier.info("pulse").orElseThrow().notifies()).isTrue();
+        assertThat(classifier.info("distance").orElseThrow().notificationEnabled()).isFalse();
+        assertThat(classifier.info("pulse").orElseThrow().notificationEnabled()).isTrue();
+        com.fasterxml.jackson.databind.JsonNode json = new ObjectMapper().valueToTree(classifier.info("pulse").orElseThrow());
+        assertThat(json.get("notify").asBoolean()).isTrue();
+        assertThat(json.has("notificationEnabled")).isFalse();
     }
 }
