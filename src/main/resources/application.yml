@@ -12,6 +12,8 @@ analysis:
 # Frontends web en otro dominio (front en la nube). Lista separada por comas.
 # Por defecto cualquier origen; en producción conviene poner solo la URL del front.
 app:
+  seed:
+    enabled: ${APP_SEED_ENABLED:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
@@ -140,10 +142,6 @@ reports:
 
 # Datos de ejemplo al arrancar con la base vacía.
 # Apagado por defecto: en MySQL se usan los datos reales (se activa en el perfil h2 y en E2E).
-app:
-  seed:
-    enabled: ${APP_SEED_ENABLED:false}
-
 logging:
   level:
     com.astronaut: INFO
