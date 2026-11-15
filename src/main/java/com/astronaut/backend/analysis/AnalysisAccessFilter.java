@@ -16,7 +16,9 @@ public class AnalysisAccessFilter extends OncePerRequestFilter {
     private final AnalysisProperties properties;
     public AnalysisAccessFilter(AnalysisProperties properties) { this.properties=properties; }
     @Override protected boolean shouldNotFilter(HttpServletRequest r) {
-        String path=r.getServletPath();
+        // Use Spring's decoded, sanitized application path, including removal
+        // of matrix parameters, so MVC cannot match a route the filter missed.
+        String path=org.springframework.web.util.UrlPathHelper.defaultInstance.getPathWithinApplication(r);
         return !(path.equals("/api/analysis") || path.startsWith("/api/analysis/"));
     }
     @Override protected void doFilterInternal(HttpServletRequest r, HttpServletResponse s,
