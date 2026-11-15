@@ -87,13 +87,18 @@ public class AnalysisService {
     public Result stored(long id, StoredRequest request) {
         if (!request.allowRemoteAnalysis()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
             "Set allowRemoteAnalysis=true to explicitly authorize sending this record's metrics to AWS Bedrock");
+        return analyze(snapshot(id,request.reportId()));
+    }
+
+    /** Read-only context for offline replay. Never invokes Bedrock or changes alerts. */
+    public Context snapshot(long id,String reportId) {
         Astronaut a=astronauts.findById(id);
         List<Reading> current=readings(a.getHeartRate(),a.getSleepHours(),a.getHrv(),a.getBodyBattery(),
             a.getBloodPressure(),a.getBloodSugar(),a.getBodyTemperature(),a.getOxygenInBlood(),
             a.getNutrition(),a.getSpaceRadiation(),a.getDistanceFromEarth(),a.getGarminLinked());
         List<Snapshot> history=new ArrayList<>();
-        if (request.reportId()!=null && !request.reportId().isBlank()) {
-            var selected=reports.get(request.reportId()).readings().stream()
+        if (reportId!=null && !reportId.isBlank()) {
+            var selected=reports.get(reportId).readings().stream()
                 .filter(r->Objects.equals(r.astronaut().id(),id)).filter(r->r.capturedAt()!=null)
                 .sorted(Comparator.comparing(com.astronaut.backend.reports.model.AstronautReading::capturedAt).reversed())
                 .limit(12).toList();
@@ -110,7 +115,7 @@ public class AnalysisService {
         // Preserve existing backend flags. These demonstration rules are not clinical validation.
         String action=states.stream().anyMatch(s->s.getLevel().name().startsWith("VERY_"))
             ? "IMMEDIATE_PROTOCOL" : states.isEmpty()?"NOT_ASSESSED":"REVIEW_MEDICAL";
-        return analyze(new Context(current,List.copyOf(history),"UNKNOWN","UNKNOWN","UNKNOWN",existing,action));
+        return new Context(current,List.copyOf(history),"UNKNOWN","UNKNOWN","UNKNOWN",existing,action);
     }
 
     static List<Reading> readings(Number pulse,Number sleep,Number hrv,Number battery,String bp,

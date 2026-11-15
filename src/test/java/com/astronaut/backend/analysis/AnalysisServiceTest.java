@@ -119,4 +119,13 @@ class AnalysisServiceTest {
             new Reading("hrv",40D,"ms",null,"SIMULATED"),new Reading("body_battery",50D,"score_0_100",null,"SIMULATED")),List.of(),"UNKNOWN","UNKNOWN","UNKNOWN",List.of(),"NOT_ASSESSED");
         assertThat(service.parse(response,fixture).observations()).hasSize(4);
     }
+    @Test void offlineSnapshotNeverInvokesBedrockAndPreservesExistingFlags() {
+        Astronaut a=new Astronaut();a.setHeartRate(75);a.setGarminLinked(true);
+        when(astronauts.findById(1L)).thenReturn(a);
+        when(alerts.findByAstronautId(1L)).thenReturn(List.of(new AlertState(1L,HealthParameter.SLEEP,AlertLevel.LOW,Instant.now())));
+        Context c=service.snapshot(1,null);
+        assertThat(c.coreAction()).isEqualTo("REVIEW_MEDICAL");assertThat(c.readings()).hasSize(12);
+        assertThat(c.readings()).allMatch(r->r.measuredAt()==null);
+        verifyNoInteractions(gateway);
+    }
 }
